@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { exec } from 'child_process';
+import * as cp from 'child_process';
 
 import { TreeDataProvider, TreeItem, ExtensionContext, Uri, workspace, commands } from 'vscode';
 
@@ -23,45 +23,44 @@ export class GitHubIssuesProvider implements TreeDataProvider<Issue> {
 		return element;
 	}
 
-	async getChildren(element?: Issue): Promise<Issue[]> {
-		const section = workspace.getConfiguration('github');
+	async getChildren(element?: Issue): Promise<TreeItem[]> {
+		let remotes: GitRemote[];
+		try {
+			remotes = await this.getGitHubRemotes();
+		} catch (err) {
+			return [new TreeItem('Not a GitHub repository.')];
+		}
+		if (!remotes.length) {
+			return [new TreeItem('No GitHub remotes found.')];
+		}
 
-		let user = section && section.get<string>('username');
-		let owner = section && section.get<string>('owner');
-		let repo = section && section.get<string>('repository');
-		if (!user || !owner || !repo) {
-			const repository = await this.getRepository();
-			owner = owner || repository.owner;
-			repo = repo || repository.repo;
-			if (!user) {
-				const data = await fill(repository.url);
-				if (data) {
-					user = data.username;
-				}
+		const issues: Issue[] = [];
+		for (const remote of remotes) {
+			let q = `repo:${remote.owner}/${remote.repo} is:open is:issue`;
+			if (remote.username) {
+				q += ` assignee:${remote.username}`;
 			}
-		}
+			const milestone = await this.getCurrentMilestone(remote);
+			if (milestone) {
+				q += ` milestone:"${milestone}"`;
+			}
 
-		let q = `repo:${owner}/${repo} is:open is:issue`;
-
-		if (user) {
-			q += ` assignee:${user}`;
+			const params = { q, sort: 'created', order: 'asc', per_page: 100 };
+			const res = await this.github.search.issues(<any>params);
+			issues.push(...res.data.items.map(item => {
+				const issue = new Issue(`${item.title} (#${item.number})`, item);
+				issue.iconPath = {
+					light: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'light', 'bug.svg')),
+					dark: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'dark', 'bug.svg'))
+				};
+				issue.contextValue = 'issue';
+				return issue;
+			}));
 		}
-		const milestone = section && section.get<string>('currentMilestone') || await this.getCurrentMilestone(owner, repo);
-		if (milestone) {
-			q += ` milestone:"${milestone}"`;
+		if (!issues.length) {
+			return [new TreeItem('No assigned issues found.')];
 		}
-
-		const params = { q, sort: 'created', order: 'asc', per_page: 100 };
-		const res = await this.github.search.issues(<any>params);
-		return res.data.items.map(item => {
-			const issue = new Issue(`${item.title} (#${item.number})`, item);
-			issue.iconPath = {
-				light: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'light', 'bug.svg')),
-				dark: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'dark', 'bug.svg'))
-			};
-			issue.contextValue = 'issue';
-			return issue;
-		});
+		return issues;
 	}
 
 	private openIssue(issue: Issue) {
@@ -80,32 +79,64 @@ export class GitHubIssuesProvider implements TreeDataProvider<Issue> {
 		copy(`[#${issue.item.number}](${issue.item.html_url})`);
 	}
 
-	private async getCurrentMilestone(owner: string, repo: string) {
+	private async getCurrentMilestone({ owner, repo }: GitRemote) {
 		const res = await this.github.issues.getMilestones({ owner, repo, per_page: 1 })
 		const milestone = res.data[0]
 		return milestone && milestone.title;
 	}
 
-	private getRepository() {
-		return new Promise<{ url: string; owner: string; repo: string; }>((resolve, reject) => {
-			exec('git remote -v', { cwd: workspace.rootPath }, (err, stdout, stderr) => {
-				if (err || stderr) {
-					reject(err || stderr);
-				} else {
-					const m = /([^\s]*github\.com\/([^/]+)\/([^ \.]+)[^\s]*)/.exec(stdout);
-					if (!m) {
-						reject('Not a GitHub repository.');
-					} else {
-						resolve({ url: m[1], owner: m[2], repo: m[3] });
-					}
-				}
-			});
-		});
+	private async getGitHubRemotes() {
+		const { stdout } = await exec('git remote -v', { cwd: workspace.rootPath });
+		const remotes: GitRemote[] = [];
+		for (const url of new Set(allMatches(/^[^\s]+\s+([^\s]+)/gm, stdout, 1))) {
+			const m = /([^\s]*github\.com\/([^/]+)\/([^ \.]+)[^\s]*)/.exec(url);
+			if (m) {
+				const url = m[1];
+				const data = await fill(url);
+				remotes.push({ url, owner: m[2], repo: m[3], username: data && data.username });
+			}
+		}
+		return remotes;
 	}
+}
+
+interface GitRemote {
+	url: string;
+	owner: string;
+	repo: string;
+	username: string;
 }
 
 class Issue extends TreeItem {
 	constructor(label: string, public item: any) {
 		super(label);
+	}
+}
+
+interface ExecResult {
+	error: Error;
+	stdout: string;
+	stderr: string;
+}
+
+function exec(command: string, options?: cp.ExecOptions) {
+	return new Promise<ExecResult>((resolve, reject) => {
+		cp.exec(command, options, (error, stdout, stderr) => {
+			(error || stderr ? reject : resolve)({ error, stdout, stderr });
+		});
+	});
+}
+
+function allMatches(regex: RegExp, string: string, group: number) {
+	return {
+		[Symbol.iterator]: function* () {
+			let m: RegExpExecArray;
+			while (m = regex.exec(string)) {
+				yield m[group];
+				if (regex.lastIndex === m.index) {
+					regex.lastIndex++;
+				}
+			}
+		}
 	}
 }

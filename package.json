@@ -24,44 +24,6 @@
         }
       ]
     },
-    "configuration": {
-      "type": "object",
-      "title": "GitHub",
-      "properties": {
-        "github.username": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "default": null,
-          "description": "The user's GitHub user name."
-        },
-        "github.owner": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "default": null,
-          "description": "The repository's owner."
-        },
-        "github.repository": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "default": null,
-          "description": "The repository's name."
-        },
-        "github.currentMilestone": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "default": null,
-          "description": "The current milestone."
-        }
-      }
-    },
     "commands": [
       {
         "command": "github.openIssue",
