@@ -1,0 +1,124 @@
+{
+  "name": "github_issues",
+  "displayName": "GitHub Issues",
+  "description": "View your current issues in the explorer view.",
+  "version": "0.0.1",
+  "publisher": "chrmarti",
+  "engines": {
+    "vscode": "^1.13.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:githubIssues"
+  ],
+  "main": "./out/src/extension",
+  "icon": "images/icon.png",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "githubIssues",
+          "name": "GitHub Issues"
+        }
+      ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "GitHub",
+      "properties": {
+        "github.username": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "The user's GitHub user name."
+        },
+        "github.owner": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "The repository's owner."
+        },
+        "github.repository": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "The repository's name."
+        },
+        "github.currentMilestone": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "The current milestone."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "github.openIssue",
+        "title": "Open Issue"
+      },
+      {
+        "command": "github.copyNumber",
+        "title": "Copy Number"
+      },
+      {
+        "command": "github.copyText",
+        "title": "Copy Text"
+      },
+      {
+        "command": "github.copyMarkdown",
+        "title": "Copy Markdown"
+      }
+    ],
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "github.openIssue",
+          "when": "view == githubIssues && viewItem == issue",
+          "group": "1_navigation"
+        },
+        {
+          "command": "github.copyNumber",
+          "when": "view == githubIssues && viewItem == issue",
+          "group": "9_cutcopypaste"
+        },
+        {
+          "command": "github.copyText",
+          "when": "view == githubIssues && viewItem == issue",
+          "group": "9_cutcopypaste"
+        },
+        {
+          "command": "github.copyMarkdown",
+          "when": "view == githubIssues && viewItem == issue",
+          "group": "9_cutcopypaste"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "tsc -p ./",
+    "compile": "tsc -watch -p ./",
+    "postinstall": "node ./node_modules/vscode/bin/install"
+  },
+  "devDependencies": {
+    "@types/copy-paste": "^1.1.30",
+    "@types/github": "^7.1.0",
+    "@types/node": "*",
+    "typescript": "^2.1.4",
+    "vscode": "^1.0.0"
+  },
+  "dependencies": {
+    "copy-paste": "^1.3.0",
+    "github": "^9.2.0"
+  }
+}
