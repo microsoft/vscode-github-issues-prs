@@ -6,6 +6,7 @@ import { TreeDataProvider, TreeItem, ExtensionContext, Uri, workspace, commands 
 
 import * as GitHub from 'github';
 import { copy } from 'copy-paste';
+import { fill } from 'git-credential-node';
 
 export class GitHubIssuesProvider implements TreeDataProvider<Issue> {
 
@@ -25,17 +26,23 @@ export class GitHubIssuesProvider implements TreeDataProvider<Issue> {
 	async getChildren(element?: Issue): Promise<Issue[]> {
 		const section = workspace.getConfiguration('github');
 
+		let user = section && section.get<string>('username');
 		let owner = section && section.get<string>('owner');
 		let repo = section && section.get<string>('repository');
-		if (!owner || !repo) {
-			const ownerAndRepo = await this.getOwnerAndRepo();
-			owner = owner || ownerAndRepo.owner;
-			repo = repo || ownerAndRepo.repo;
+		if (!user || !owner || !repo) {
+			const repository = await this.getRepository();
+			owner = owner || repository.owner;
+			repo = repo || repository.repo;
+			if (!user) {
+				const data = await fill(repository.url);
+				if (data) {
+					user = data.username;
+				}
+			}
 		}
 
 		let q = `repo:${owner}/${repo} is:open is:issue`;
 
-		const user = section && section.get<string>('username');
 		if (user) {
 			q += ` assignee:${user}`;
 		}
@@ -79,17 +86,17 @@ export class GitHubIssuesProvider implements TreeDataProvider<Issue> {
 		return milestone && milestone.title;
 	}
 
-	private getOwnerAndRepo() {
-		return new Promise<{ owner: string; repo: string; }>((resolve, reject) => {
+	private getRepository() {
+		return new Promise<{ url: string; owner: string; repo: string; }>((resolve, reject) => {
 			exec('git remote -v', { cwd: workspace.rootPath }, (err, stdout, stderr) => {
 				if (err || stderr) {
 					reject(err || stderr);
 				} else {
-					const m = /github\.com\/([^/]+)\/([^ \.]+)/.exec(stdout);
+					const m = /([^\s]*github\.com\/([^/]+)\/([^ \.]+)[^\s]*)/.exec(stdout);
 					if (!m) {
 						reject('Not a GitHub repository.');
 					} else {
-						resolve({ owner: m[1], repo: m[2] });
+						resolve({ url: m[1], owner: m[2], repo: m[3] });
 					}
 				}
 			});
