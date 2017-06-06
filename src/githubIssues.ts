@@ -7,7 +7,7 @@ import { fill } from 'git-credential-node';
 
 import { Event, EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, window, workspace, commands } from 'vscode';
 
-import { exec, allMatches } from './utils';
+import { exec, allMatches, compareDateStrings } from './utils';
 
 interface GitRemote {
 	url: string;
@@ -171,8 +171,20 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	private async getCurrentMilestones({ owner, repo }: GitRemote): Promise<string[]> {
-		const res = await this.github.issues.getMilestones({ owner, repo, per_page: 2 })
-		return res.data.map(milestone => milestone.title);
+		const res = await this.github.issues.getMilestones({ owner, repo, per_page: 10 })
+		let milestones: any[] = res.data;
+		milestones.sort((a, b) => {
+			const cmp = compareDateStrings(a.due_on, b.due_on);
+			if (cmp) {
+				return cmp;
+			}
+			return a.title.localeCompare(b.title);
+		});
+		if (milestones.length && milestones[0].due_on) {
+			milestones = milestones.filter(milestone => milestone.due_on);
+		}
+		return milestones.slice(0, 2)
+			.map(milestone => milestone.title);
 	}
 
 	private async getGitHubRemotes() {
