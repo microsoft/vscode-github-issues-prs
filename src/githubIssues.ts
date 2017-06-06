@@ -1,12 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as cp from 'child_process';
-
-import { Event, EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, workspace, commands } from 'vscode';
 
 import * as GitHub from 'github';
 import { copy } from 'copy-paste';
 import { fill } from 'git-credential-node';
+
+import { Event, EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, workspace, commands } from 'vscode';
+
+import { exec, allMatches } from './utils';
 
 interface GitRemote {
 	url: string;
@@ -176,33 +177,5 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 			}
 		}
 		return remotes;
-	}
-}
-
-interface ExecResult {
-	error: Error;
-	stdout: string;
-	stderr: string;
-}
-
-function exec(command: string, options?: cp.ExecOptions) {
-	return new Promise<ExecResult>((resolve, reject) => {
-		cp.exec(command, options, (error, stdout, stderr) => {
-			(error || stderr ? reject : resolve)({ error, stdout, stderr });
-		});
-	});
-}
-
-function allMatches(regex: RegExp, string: string, group: number) {
-	return {
-		[Symbol.iterator]: function* () {
-			let m: RegExpExecArray;
-			while (m = regex.exec(string)) {
-				yield m[group];
-				if (regex.lastIndex === m.index) {
-					regex.lastIndex++;
-				}
-			}
-		}
 	}
 }
