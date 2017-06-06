@@ -5,7 +5,7 @@ import * as GitHub from 'github';
 import { copy } from 'copy-paste';
 import { fill } from 'git-credential-node';
 
-import { Event, EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, workspace, commands } from 'vscode';
+import { Event, EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, window, workspace, commands } from 'vscode';
 
 import { exec, allMatches } from './utils';
 
@@ -39,6 +39,7 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 	private github = new GitHub();
 
 	private fetching = false;
+	private lastFetch: number;
 	private children: Promise<TreeItem[]>;
 
 	constructor(private context: ExtensionContext) {
@@ -47,6 +48,8 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 		context.subscriptions.push(commands.registerCommand('githubIssues.copyNumber', this.copyNumber, this));
 		context.subscriptions.push(commands.registerCommand('githubIssues.copyText', this.copyText, this));
 		context.subscriptions.push(commands.registerCommand('githubIssues.copyMarkdown', this.copyMarkdown, this));
+
+		context.subscriptions.push(window.onDidChangeActiveTextEditor(this.poll, this));
 	}
 
 	getTreeItem(element: TreeItem): TreeItem {
@@ -60,6 +63,7 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 
 		if (!this.children) {
 			this.fetching = true;
+			this.lastFetch = Date.now();
 			this.children = this.fetchChildren();
 			this.children.then(() => this.fetching = false);
 		}
@@ -72,6 +76,12 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 			this.children = undefined;
 			await this.getChildren();
 			this._onDidChangeTreeData.fire();
+		}
+	}
+
+	private async poll() {
+		if (!this.lastFetch || this.lastFetch + 30 * 60 * 1000 < Date.now()) {
+			return this.refresh();
 		}
 	}
 
