@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as cp from 'child_process';
 
-import { TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, workspace, commands } from 'vscode';
+import { Event, EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, workspace, commands } from 'vscode';
 
 import * as GitHub from 'github';
 import { copy } from 'copy-paste';
@@ -30,18 +30,25 @@ class Issue extends TreeItem {
 	}
 }
 
-export class GitHubIssuesProvider implements TreeDataProvider<Issue> {
+export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
+
+	private _onDidChangeTreeData = new EventEmitter<TreeItem | undefined>();
+	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
 	private github = new GitHub();
 
+	private fetching = false;
+	private children: Promise<TreeItem[]>;
+
 	constructor(private context: ExtensionContext) {
+		context.subscriptions.push(commands.registerCommand('github.refresh', this.refresh, this));
 		context.subscriptions.push(commands.registerCommand('github.openIssue', this.openIssue, this));
 		context.subscriptions.push(commands.registerCommand('github.copyNumber', this.copyNumber, this));
 		context.subscriptions.push(commands.registerCommand('github.copyText', this.copyText, this));
 		context.subscriptions.push(commands.registerCommand('github.copyMarkdown', this.copyMarkdown, this));
 	}
 
-	getTreeItem(element: Issue): TreeItem {
+	getTreeItem(element: TreeItem): TreeItem {
 		return element;
 	}
 
@@ -50,6 +57,24 @@ export class GitHubIssuesProvider implements TreeDataProvider<Issue> {
 			return element.issues;
 		}
 
+		if (!this.children) {
+			this.fetching = true;
+			this.children = this.fetchChildren();
+			this.children.then(() => this.fetching = false);
+		}
+
+		return this.children;
+	}
+
+	private async refresh() {
+		if (!this.fetching) {
+			this.children = undefined;
+			await this.getChildren();
+			this._onDidChangeTreeData.fire();
+		}
+	}
+
+	private async fetchChildren(element?: TreeItem): Promise<TreeItem[]> {
 		if (!workspace.rootPath) {
 			return [new TreeItem('No folder opened')];
 		}

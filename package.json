@@ -26,6 +26,14 @@
     },
     "commands": [
       {
+        "command": "github.refresh",
+        "title": "Refresh",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
+      },
+      {
         "command": "github.openIssue",
         "title": "Open Issue"
       },
@@ -43,6 +51,13 @@
       }
     ],
     "menus": {
+      "view/title": [
+        {
+          "command": "github.refresh",
+          "when": "view == githubIssues",
+          "group": "navigation"
+        }
+      ],
       "view/item/context": [
         {
           "command": "github.openIssue",
