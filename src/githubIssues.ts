@@ -2,11 +2,33 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as cp from 'child_process';
 
-import { TreeDataProvider, TreeItem, ExtensionContext, Uri, workspace, commands } from 'vscode';
+import { TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, workspace, commands } from 'vscode';
 
 import * as GitHub from 'github';
 import { copy } from 'copy-paste';
 import { fill } from 'git-credential-node';
+
+interface GitRemote {
+	url: string;
+	owner: string;
+	repo: string;
+	username: string;
+}
+
+class Milestone extends TreeItem {
+
+	public issues: Issue[] = [];
+
+	constructor(label: string) {
+		super(label, TreeItemCollapsibleState.Expanded);
+	}
+}
+
+class Issue extends TreeItem {
+	constructor(label: string, public item: any) {
+		super(label);
+	}
+}
 
 export class GitHubIssuesProvider implements TreeDataProvider<Issue> {
 
@@ -23,44 +45,77 @@ export class GitHubIssuesProvider implements TreeDataProvider<Issue> {
 		return element;
 	}
 
-	async getChildren(element?: Issue): Promise<TreeItem[]> {
+	async getChildren(element?: TreeItem): Promise<TreeItem[]> {
+		if (element instanceof Milestone) {
+			return element.issues;
+		}
+
+		if (!workspace.rootPath) {
+			return [new TreeItem('No folder opened')];
+		}
+
 		let remotes: GitRemote[];
 		try {
 			remotes = await this.getGitHubRemotes();
 		} catch (err) {
-			return [new TreeItem('Not a GitHub repository.')];
+			return [new TreeItem('Not a GitHub repository')];
 		}
 		if (!remotes.length) {
-			return [new TreeItem('No GitHub remotes found.')];
+			return [new TreeItem('No GitHub remotes found')];
 		}
 
 		const issues: Issue[] = [];
 		for (const remote of remotes) {
-			let q = `repo:${remote.owner}/${remote.repo} is:open is:issue`;
-			if (remote.username) {
-				q += ` assignee:${remote.username}`;
-			}
-			const milestone = await this.getCurrentMilestone(remote);
-			if (milestone) {
-				q += ` milestone:"${milestone}"`;
+			const milestones = await this.getCurrentMilestones(remote);
+			if (!milestones.length) {
+				milestones.push(undefined);
 			}
 
-			const params = { q, sort: 'created', order: 'asc', per_page: 100 };
-			const res = await this.github.search.issues(<any>params);
-			issues.push(...res.data.items.map(item => {
-				const issue = new Issue(`${item.title} (#${item.number})`, item);
-				issue.iconPath = {
-					light: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'light', 'bug.svg')),
-					dark: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'dark', 'bug.svg'))
-				};
-				issue.contextValue = 'issue';
-				return issue;
-			}));
+			for (const milestone of milestones) {
+				let q = `repo:${remote.owner}/${remote.repo} is:open is:issue`;
+				if (remote.username) {
+					q += ` assignee:${remote.username}`;
+				}
+				if (milestone) {
+					q += ` milestone:"${milestone}"`;
+				}
+
+				const params = { q, sort: 'created', order: 'asc', per_page: 100 };
+				const res = await this.github.search.issues(<any>params);
+				issues.push(...res.data.items.map(item => {
+					const issue = new Issue(`${item.title} (#${item.number})`, item);
+					issue.iconPath = {
+						light: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'light', 'bug.svg')),
+						dark: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'dark', 'bug.svg'))
+					};
+					issue.contextValue = 'issue';
+					return issue;
+				}));
+			}
 		}
 		if (!issues.length) {
-			return [new TreeItem('No assigned issues found.')];
+			return [new TreeItem('No issues found')];
 		}
-		return issues;
+
+		const milestoneIndex: { [title: string]: Milestone; } = {};
+		const milestones: Milestone[] = [];
+		for (const issue of issues) {
+			const m = issue.item.milestone;
+			const milestoneLabel = m && m.title || 'No Milestone';
+			let milestone = milestoneIndex[milestoneLabel];
+			if (!milestone) {
+				milestone = new Milestone(milestoneLabel);
+				milestoneIndex[milestoneLabel] = milestone;
+				milestones.push(milestone);
+			}
+			milestone.issues.push(issue);
+		}
+
+		if (milestones.length === 1 && milestones[0].label === 'No Milestone') {
+			return milestones[0].issues;
+		}
+
+		return milestones;
 	}
 
 	private openIssue(issue: Issue) {
@@ -79,10 +134,9 @@ export class GitHubIssuesProvider implements TreeDataProvider<Issue> {
 		copy(`[#${issue.item.number}](${issue.item.html_url})`);
 	}
 
-	private async getCurrentMilestone({ owner, repo }: GitRemote) {
-		const res = await this.github.issues.getMilestones({ owner, repo, per_page: 1 })
-		const milestone = res.data[0]
-		return milestone && milestone.title;
+	private async getCurrentMilestones({ owner, repo }: GitRemote): Promise<string[]> {
+		const res = await this.github.issues.getMilestones({ owner, repo, per_page: 2 })
+		return res.data.map(milestone => milestone.title);
 	}
 
 	private async getGitHubRemotes() {
@@ -97,19 +151,6 @@ export class GitHubIssuesProvider implements TreeDataProvider<Issue> {
 			}
 		}
 		return remotes;
-	}
-}
-
-interface GitRemote {
-	url: string;
-	owner: string;
-	repo: string;
-	username: string;
-}
-
-class Issue extends TreeItem {
-	constructor(label: string, public item: any) {
-		super(label);
 	}
 }
 
