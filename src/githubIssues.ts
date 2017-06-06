@@ -41,11 +41,11 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 	private children: Promise<TreeItem[]>;
 
 	constructor(private context: ExtensionContext) {
-		context.subscriptions.push(commands.registerCommand('github.refresh', this.refresh, this));
-		context.subscriptions.push(commands.registerCommand('github.openIssue', this.openIssue, this));
-		context.subscriptions.push(commands.registerCommand('github.copyNumber', this.copyNumber, this));
-		context.subscriptions.push(commands.registerCommand('github.copyText', this.copyText, this));
-		context.subscriptions.push(commands.registerCommand('github.copyMarkdown', this.copyMarkdown, this));
+		context.subscriptions.push(commands.registerCommand('githubIssues.refresh', this.refresh, this));
+		context.subscriptions.push(commands.registerCommand('githubIssues.openIssue', this.openIssue, this));
+		context.subscriptions.push(commands.registerCommand('githubIssues.copyNumber', this.copyNumber, this));
+		context.subscriptions.push(commands.registerCommand('githubIssues.copyText', this.copyText, this));
+		context.subscriptions.push(commands.registerCommand('githubIssues.copyMarkdown', this.copyMarkdown, this));
 	}
 
 	getTreeItem(element: TreeItem): TreeItem {

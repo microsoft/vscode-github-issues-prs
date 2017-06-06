@@ -26,7 +26,7 @@
     },
     "commands": [
       {
-        "command": "github.refresh",
+        "command": "githubIssues.refresh",
         "title": "Refresh",
         "icon": {
           "light": "resources/light/refresh.svg",
@@ -34,48 +34,48 @@
         }
       },
       {
-        "command": "github.openIssue",
+        "command": "githubIssues.openIssue",
         "title": "Open Issue"
       },
       {
-        "command": "github.copyNumber",
+        "command": "githubIssues.copyNumber",
         "title": "Copy Number"
       },
       {
-        "command": "github.copyText",
+        "command": "githubIssues.copyText",
         "title": "Copy Text"
       },
       {
-        "command": "github.copyMarkdown",
+        "command": "githubIssues.copyMarkdown",
         "title": "Copy Markdown"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "github.refresh",
+          "command": "githubIssues.refresh",
           "when": "view == githubIssues",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "github.openIssue",
+          "command": "githubIssues.openIssue",
           "when": "view == githubIssues && viewItem == issue",
           "group": "1_navigation"
         },
         {
-          "command": "github.copyNumber",
+          "command": "githubIssues.copyNumber",
           "when": "view == githubIssues && viewItem == issue",
           "group": "9_cutcopypaste"
         },
         {
-          "command": "github.copyText",
+          "command": "githubIssues.copyText",
           "when": "view == githubIssues && viewItem == issue",
           "group": "9_cutcopypaste"
         },
         {
-          "command": "github.copyMarkdown",
+          "command": "githubIssues.copyMarkdown",
           "when": "view == githubIssues && viewItem == issue",
           "group": "9_cutcopypaste"
         }
