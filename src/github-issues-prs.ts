@@ -30,7 +30,7 @@ class Issue extends TreeItem {
 	}
 }
 
-export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
+export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 	private _onDidChangeTreeData = new EventEmitter<TreeItem | undefined>();
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
@@ -42,13 +42,13 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 	private children: Promise<TreeItem[]> | undefined;
 
 	constructor(private context: ExtensionContext) {
-		context.subscriptions.push(commands.registerCommand('githubIssues.refresh', this.refresh, this));
-		context.subscriptions.push(commands.registerCommand('githubIssues.openIssue', this.openIssue, this));
-		context.subscriptions.push(commands.registerCommand('githubIssues.openPullRequest', this.openIssue, this));
-		// context.subscriptions.push(commands.registerCommand('githubIssues.checkoutPullRequest', this.checkoutPullRequest, this));
-		context.subscriptions.push(commands.registerCommand('githubIssues.copyNumber', this.copyNumber, this));
-		context.subscriptions.push(commands.registerCommand('githubIssues.copyText', this.copyText, this));
-		context.subscriptions.push(commands.registerCommand('githubIssues.copyMarkdown', this.copyMarkdown, this));
+		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.refresh', this.refresh, this));
+		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openIssue', this.openIssue, this));
+		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openPullRequest', this.openIssue, this));
+		// context.subscriptions.push(commands.registerCommand('githubIssuesPrs.checkoutPullRequest', this.checkoutPullRequest, this));
+		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.copyNumber', this.copyNumber, this));
+		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.copyText', this.copyText, this));
+		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.copyMarkdown', this.copyMarkdown, this));
 
 		context.subscriptions.push(window.onDidChangeActiveTextEditor(this.poll, this));
 	}

@@ -1,6 +1,6 @@
 {
   "name": "github-issues-prs",
-  "displayName": "GitHub Issues",
+  "displayName": "GitHub Issues and PRs",
   "description": "View the issues and PRs assigned to you in the Explorer viewlet.",
   "version": "0.1.0",
   "publisher": "ms-vscode",
@@ -19,7 +19,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onView:githubIssues"
+    "onView:githubIssuesPrs"
   ],
   "main": "./out/src/extension",
   "icon": "images/icon.png",
@@ -27,14 +27,14 @@
     "views": {
       "explorer": [
         {
-          "id": "githubIssues",
-          "name": "GitHub Issues"
+          "id": "githubIssuesPrs",
+          "name": "GitHub Issues and PRs"
         }
       ]
     },
     "commands": [
       {
-        "command": "githubIssues.refresh",
+        "command": "githubIssuesPrs.refresh",
         "title": "Refresh",
         "icon": {
           "light": "resources/light/refresh.svg",
@@ -42,73 +42,73 @@
         }
       },
       {
-        "command": "githubIssues.openIssue",
+        "command": "githubIssuesPrs.openIssue",
         "title": "Open Issue"
       },
       {
-        "command": "githubIssues.openPullRequest",
+        "command": "githubIssuesPrs.openPullRequest",
         "title": "Open Pull Request"
       },
       {
-        "command": "githubIssues.copyNumber",
+        "command": "githubIssuesPrs.copyNumber",
         "title": "Copy Number"
       },
       {
-        "command": "githubIssues.copyText",
+        "command": "githubIssuesPrs.copyText",
         "title": "Copy Text"
       },
       {
-        "command": "githubIssues.copyMarkdown",
+        "command": "githubIssuesPrs.copyMarkdown",
         "title": "Copy Markdown"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "githubIssues.refresh",
-          "when": "view == githubIssues",
+          "command": "githubIssuesPrs.refresh",
+          "when": "view == githubIssuesPrs",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "githubIssues.openIssue",
-          "when": "view == githubIssues && viewItem == issue",
+          "command": "githubIssuesPrs.openIssue",
+          "when": "view == githubIssuesPrs && viewItem == issue",
           "group": "1_navigation"
         },
         {
-          "command": "githubIssues.copyNumber",
-          "when": "view == githubIssues && viewItem == issue",
+          "command": "githubIssuesPrs.copyNumber",
+          "when": "view == githubIssuesPrs && viewItem == issue",
           "group": "9_cutcopypaste"
         },
         {
-          "command": "githubIssues.copyText",
-          "when": "view == githubIssues && viewItem == issue",
+          "command": "githubIssuesPrs.copyText",
+          "when": "view == githubIssuesPrs && viewItem == issue",
           "group": "9_cutcopypaste"
         },
         {
-          "command": "githubIssues.copyMarkdown",
-          "when": "view == githubIssues && viewItem == issue",
+          "command": "githubIssuesPrs.copyMarkdown",
+          "when": "view == githubIssuesPrs && viewItem == issue",
           "group": "9_cutcopypaste"
         },
         {
-          "command": "githubIssues.openPullRequest",
-          "when": "view == githubIssues && viewItem == pull_request",
+          "command": "githubIssuesPrs.openPullRequest",
+          "when": "view == githubIssuesPrs && viewItem == pull_request",
           "group": "1_navigation"
         },
         {
-          "command": "githubIssues.copyNumber",
-          "when": "view == githubIssues && viewItem == pull_request",
+          "command": "githubIssuesPrs.copyNumber",
+          "when": "view == githubIssuesPrs && viewItem == pull_request",
           "group": "9_cutcopypaste"
         },
         {
-          "command": "githubIssues.copyText",
-          "when": "view == githubIssues && viewItem == pull_request",
+          "command": "githubIssuesPrs.copyText",
+          "when": "view == githubIssuesPrs && viewItem == pull_request",
           "group": "9_cutcopypaste"
         },
         {
-          "command": "githubIssues.copyMarkdown",
-          "when": "view == githubIssues && viewItem == pull_request",
+          "command": "githubIssuesPrs.copyMarkdown",
+          "when": "view == githubIssuesPrs && viewItem == pull_request",
           "group": "9_cutcopypaste"
         }
       ]

@@ -2,8 +2,8 @@
 
 import { ExtensionContext, window } from 'vscode';
 
-import { GitHubIssuesProvider } from './githubIssues'
+import { GitHubIssuesPrsProvider } from './github-issues-prs'
 
 export function activate(context: ExtensionContext) {
-	window.registerTreeDataProvider('githubIssues', new GitHubIssuesProvider(context));
+	window.registerTreeDataProvider('githubIssuesPrs', new GitHubIssuesPrsProvider(context));
 }
