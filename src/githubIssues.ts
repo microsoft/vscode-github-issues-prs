@@ -46,7 +46,7 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 		context.subscriptions.push(commands.registerCommand('githubIssues.refresh', this.refresh, this));
 		context.subscriptions.push(commands.registerCommand('githubIssues.openIssue', this.openIssue, this));
 		context.subscriptions.push(commands.registerCommand('githubIssues.openPullRequest', this.openIssue, this));
-		context.subscriptions.push(commands.registerCommand('githubIssues.checkoutPullRequest', this.checkoutPullRequest, this));
+		// context.subscriptions.push(commands.registerCommand('githubIssues.checkoutPullRequest', this.checkoutPullRequest, this));
 		context.subscriptions.push(commands.registerCommand('githubIssues.copyNumber', this.copyNumber, this));
 		context.subscriptions.push(commands.registerCommand('githubIssues.copyText', this.copyText, this));
 		context.subscriptions.push(commands.registerCommand('githubIssues.copyMarkdown', this.copyMarkdown, this));
