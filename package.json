@@ -115,6 +115,7 @@
     "@types/copy-paste": "^1.1.30",
     "@types/github": "^7.1.0",
     "@types/node": "*",
+    "tslint": "^5.4.3",
     "typescript": "^2.1.4",
     "vscode": "^1.0.0"
   },

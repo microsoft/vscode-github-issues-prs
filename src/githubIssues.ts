@@ -1,13 +1,12 @@
-import * as fs from 'fs';
 import * as path from 'path';
 
 import * as GitHub from 'github';
 import { copy } from 'copy-paste';
 import { fill } from 'git-credential-node';
 
-import { Event, EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, window, workspace, commands } from 'vscode';
+import { EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, window, workspace, commands } from 'vscode';
 
-import { exec, sleep, allMatches, compareDateStrings } from './utils';
+import { exec, allMatches, compareDateStrings } from './utils';
 
 interface GitRemote {
 	url: string;
@@ -40,7 +39,7 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 
 	private fetching = false;
 	private lastFetch: number;
-	private children: Promise<TreeItem[]>;
+	private children: Promise<TreeItem[]> | undefined;
 
 	constructor(private context: ExtensionContext) {
 		context.subscriptions.push(commands.registerCommand('githubIssues.refresh', this.refresh, this));
@@ -104,7 +103,7 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 
 		const issues: Issue[] = [];
 		for (const remote of remotes) {
-			const milestones = await this.getCurrentMilestones(remote);
+			const milestones: (string | undefined)[] = await this.getCurrentMilestones(remote);
 			if (!milestones.length) {
 				milestones.push(undefined);
 			}
@@ -120,7 +119,7 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 
 				const params = { q, sort: 'created', order: 'asc', per_page: 100 };
 				const res = await this.github.search.issues(<any>params);
-				issues.push(...res.data.items.map(item => {
+				issues.push(...res.data.items.map((item: any) => {
 					const issue = new Issue(`${item.title} (#${item.number})`, item);
 					const icon = item.pull_request ? 'git-pull-request.svg' : 'bug.svg';
 					issue.iconPath = {
@@ -161,7 +160,7 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 		commands.executeCommand('vscode.open', Uri.parse(issue.item.html_url));
 	}
 
-	private async checkoutPullRequest(issue: Issue) {
+	/* private */ async checkoutPullRequest(issue: Issue) {
 		const p = Uri.parse(issue.item.repository_url).path;
 		const repo = path.basename(p);
 		const owner = path.basename(path.dirname(p));
@@ -171,9 +170,9 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 		const remoteBranch = pr.data.head.ref;
 		const localBranch = `${login}/${remoteBranch}`;
 		try {
-			let remote: string;
+			let remote: string | undefined = undefined;
 			const remotes = await exec(`git remote -v`, { cwd: workspace.rootPath });
-			let m: RegExpExecArray;
+			let m: RegExpExecArray | null;
 			const r = /^([^\s]+)\s+([^\s]+)\s+\(fetch\)/gm;
 			while (m = r.exec(remotes.stdout)) {
 				if (m[2] === clone_url) {
@@ -235,7 +234,9 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 			if (m) {
 				const url = m[1];
 				const data = await fill(url);
-				remotes.push({ url, owner: m[2], repo: m[3], username: data && data.username });
+				if (data) {
+					remotes.push({ url, owner: m[2], repo: m[3], username: data.username });
+				}
 			}
 		}
 		return remotes;
