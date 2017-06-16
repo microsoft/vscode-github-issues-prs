@@ -102,37 +102,46 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		}
 
 		const issues: Issue[] = [];
+		const errors: TreeItem[] = [];
 		for (const remote of remotes) {
-			const milestones: (string | undefined)[] = await this.getCurrentMilestones(remote);
-			if (!milestones.length) {
-				milestones.push(undefined);
-			}
-
-			for (const milestone of milestones) {
-				let q = `repo:${remote.owner}/${remote.repo} is:open`;
-				if (remote.username) {
-					q += ` assignee:${remote.username}`;
-				}
-				if (milestone) {
-					q += ` milestone:"${milestone}"`;
+			try {
+				const milestones: (string | undefined)[] = await this.getCurrentMilestones(remote);
+				if (!milestones.length) {
+					milestones.push(undefined);
 				}
 
-				const params = { q, sort: 'created', order: 'asc', per_page: 100 };
-				const res = await this.github.search.issues(<any>params);
-				issues.push(...res.data.items.map((item: any) => {
-					const issue = new Issue(`${item.title} (#${item.number})`, item);
-					const icon = item.pull_request ? 'git-pull-request.svg' : 'bug.svg';
-					issue.iconPath = {
-						light: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'light', icon)),
-						dark: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'dark', icon))
-					};
-					issue.contextValue = item.pull_request ? 'pull_request' : 'issue';
-					return issue;
-				}));
+				for (const milestone of milestones) {
+					let q = `repo:${remote.owner}/${remote.repo} is:open`;
+					if (remote.username) {
+						q += ` assignee:${remote.username}`;
+					}
+					if (milestone) {
+						q += ` milestone:"${milestone}"`;
+					}
+
+					const params = { q, sort: 'created', order: 'asc', per_page: 100 };
+					const res = await this.github.search.issues(<any>params);
+					issues.push(...res.data.items.map((item: any) => {
+						const issue = new Issue(`${item.title} (#${item.number})`, item);
+						const icon = item.pull_request ? 'git-pull-request.svg' : 'bug.svg';
+						issue.iconPath = {
+							light: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'light', icon)),
+							dark: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'dark', icon))
+						};
+						issue.contextValue = item.pull_request ? 'pull_request' : 'issue';
+						return issue;
+					}));
+				}
+			} catch (err) {
+				if (err.code === 404) {
+					errors.push(new TreeItem(`Cannot access ${remote.owner}/${remote.repo}`));
+				} else {
+					throw err;
+				}
 			}
 		}
 		if (!issues.length) {
-			return [new TreeItem('No issues found')];
+			return errors.length ? errors : [new TreeItem('No issues found')];
 		}
 
 		const milestoneIndex: { [title: string]: Milestone; } = {};
