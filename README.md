@@ -1,6 +1,6 @@
 # GitHub Issues and PRs
 
-View the issues and PRs assigned to you in the Explorer viewlet.
+View the issues and PRs assigned to you in the Explorer viewlet. Currently the username and repository are taken from the Git configuration and only issues assigned to that user and to the next two milestones are shown.
 
 ![GitHub Issues and PRs in Action](images/in_action.gif)
 
