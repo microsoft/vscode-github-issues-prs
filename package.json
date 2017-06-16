@@ -1,9 +1,17 @@
 {
-  "name": "github_issues",
+  "name": "github-issues-prs",
   "displayName": "GitHub Issues",
-  "description": "View your current issues in the explorer view.",
-  "version": "0.0.1",
-  "publisher": "chrmarti",
+  "description": "View the issues and PRs assigned to you in the Explorer viewlet.",
+  "version": "0.1.0",
+  "publisher": "ms-vscode",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Microsoft/vscode-github-issues-prs.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Microsoft/vscode-github-issues-prs/issues"
+  },
   "engines": {
     "vscode": "^1.13.0"
   },

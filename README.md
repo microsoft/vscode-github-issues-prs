@@ -1,3 +1,22 @@
 # GitHub Issues and PRs
 
-View your current issues and PRs in the explorer view.
+View the issues and PRs assigned to you in the Explorer viewlet.
+
+![GitHub Issues and PRs in Action](images/in_action.gif)
+
+## Release Notes
+
+### 0.1.0
+
+Initial release.
+
+## Contributing
+
+File bugs and feature requests in [GitHub Issues](https://github.com/Microsoft/vscode-github-issues-prs/issues).
+
+Checkout the source code in the [GitHub Repository](https://github.com/Microsoft/vscode-github-issues-prs).
+
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+## License
+[MIT](LICENSE)
