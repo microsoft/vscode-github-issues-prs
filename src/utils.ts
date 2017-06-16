@@ -14,6 +14,12 @@ export function exec(command: string, options?: cp.ExecOptions) {
     });
 }
 
+export function sleep(millis: number) {
+    return new Promise<void>(resolve => {
+        setTimeout(resolve, millis);
+    });
+}
+
 export function allMatches(regex: RegExp, string: string, group: number) {
     return {
         [Symbol.iterator]: function* () {

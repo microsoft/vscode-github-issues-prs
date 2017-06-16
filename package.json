@@ -38,6 +38,14 @@
         "title": "Open Issue"
       },
       {
+        "command": "githubIssues.openPullRequest",
+        "title": "Open Pull Request"
+      },
+      {
+        "command": "githubIssues.checkoutPullRequest",
+        "title": "Checkout Pull Request"
+      },
+      {
         "command": "githubIssues.copyNumber",
         "title": "Copy Number"
       },
@@ -77,6 +85,31 @@
         {
           "command": "githubIssues.copyMarkdown",
           "when": "view == githubIssues && viewItem == issue",
+          "group": "9_cutcopypaste"
+        },
+        {
+          "command": "githubIssues.openPullRequest",
+          "when": "view == githubIssues && viewItem == pull_request",
+          "group": "1_navigation"
+        },
+        {
+          "command": "githubIssues.checkoutPullRequest",
+          "when": "view == githubIssues && viewItem == pull_request",
+          "group": "1_navigation"
+        },
+        {
+          "command": "githubIssues.copyNumber",
+          "when": "view == githubIssues && viewItem == pull_request",
+          "group": "9_cutcopypaste"
+        },
+        {
+          "command": "githubIssues.copyText",
+          "when": "view == githubIssues && viewItem == pull_request",
+          "group": "9_cutcopypaste"
+        },
+        {
+          "command": "githubIssues.copyMarkdown",
+          "when": "view == githubIssues && viewItem == pull_request",
           "group": "9_cutcopypaste"
         }
       ]

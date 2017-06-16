@@ -7,7 +7,7 @@ import { fill } from 'git-credential-node';
 
 import { Event, EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, window, workspace, commands } from 'vscode';
 
-import { exec, allMatches, compareDateStrings } from './utils';
+import { exec, sleep, allMatches, compareDateStrings } from './utils';
 
 interface GitRemote {
 	url: string;
@@ -45,6 +45,8 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 	constructor(private context: ExtensionContext) {
 		context.subscriptions.push(commands.registerCommand('githubIssues.refresh', this.refresh, this));
 		context.subscriptions.push(commands.registerCommand('githubIssues.openIssue', this.openIssue, this));
+		context.subscriptions.push(commands.registerCommand('githubIssues.openPullRequest', this.openIssue, this));
+		context.subscriptions.push(commands.registerCommand('githubIssues.checkoutPullRequest', this.checkoutPullRequest, this));
 		context.subscriptions.push(commands.registerCommand('githubIssues.copyNumber', this.copyNumber, this));
 		context.subscriptions.push(commands.registerCommand('githubIssues.copyText', this.copyText, this));
 		context.subscriptions.push(commands.registerCommand('githubIssues.copyMarkdown', this.copyMarkdown, this));
@@ -108,7 +110,7 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 			}
 
 			for (const milestone of milestones) {
-				let q = `repo:${remote.owner}/${remote.repo} is:open is:issue`;
+				let q = `repo:${remote.owner}/${remote.repo} is:open`;
 				if (remote.username) {
 					q += ` assignee:${remote.username}`;
 				}
@@ -120,11 +122,12 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 				const res = await this.github.search.issues(<any>params);
 				issues.push(...res.data.items.map(item => {
 					const issue = new Issue(`${item.title} (#${item.number})`, item);
+					const icon = item.pull_request ? 'git-pull-request.svg' : 'bug.svg';
 					issue.iconPath = {
-						light: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'light', 'bug.svg')),
-						dark: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'dark', 'bug.svg'))
+						light: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'light', icon)),
+						dark: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'dark', icon))
 					};
-					issue.contextValue = 'issue';
+					issue.contextValue = item.pull_request ? 'pull_request' : 'issue';
 					return issue;
 				}));
 			}
@@ -156,6 +159,43 @@ export class GitHubIssuesProvider implements TreeDataProvider<TreeItem> {
 
 	private openIssue(issue: Issue) {
 		commands.executeCommand('vscode.open', Uri.parse(issue.item.html_url));
+	}
+
+	private async checkoutPullRequest(issue: Issue) {
+		const p = Uri.parse(issue.item.repository_url).path;
+		const repo = path.basename(p);
+		const owner = path.basename(path.dirname(p));
+		const pr = await this.github.pullRequests.get({ owner, repo, number: issue.item.number });
+		const login = pr.data.head.repo.owner.login;
+		const clone_url = pr.data.head.repo.clone_url;
+		const remoteBranch = pr.data.head.ref;
+		const localBranch = `${login}/${remoteBranch}`;
+		try {
+			let remote: string;
+			const remotes = await exec(`git remote -v`, { cwd: workspace.rootPath });
+			let m: RegExpExecArray;
+			const r = /^([^\s]+)\s+([^\s]+)\s+\(fetch\)/gm;
+			while (m = r.exec(remotes.stdout)) {
+				if (m[2] === clone_url) {
+					remote = m[1];
+					break;
+				}
+			}
+			if (!remote) {
+				await exec(`git remote add ${login} ${clone_url}`, { cwd: workspace.rootPath });
+				remote = login;
+			}
+			try {
+				await exec(`git fetch ${remote} ${remoteBranch}`, { cwd: workspace.rootPath });
+			} catch (err) {
+				console.error(err);
+				// git fetch prints to stderr, continue
+			}
+			await exec(`git checkout -b ${localBranch} ${remote}/${remoteBranch}`, { cwd: workspace.rootPath });
+		} catch (err) {
+			console.error(err);
+			// git checkout prints to stderr, continue
+		}
 	}
 
 	private copyNumber(issue: Issue) {
