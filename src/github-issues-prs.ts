@@ -2,18 +2,12 @@ import * as path from 'path';
 
 import * as GitHub from 'github';
 import { copy } from 'copy-paste';
-import { fill } from 'git-credential-node';
 
 import { EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, window, workspace, commands } from 'vscode';
 
-import { exec, allMatches, compareDateStrings } from './utils';
-
-interface GitRemote {
-	url: string;
-	owner: string;
-	repo: string;
-	username: string;
-}
+import { exec, compareDateStrings } from './utils';
+import { GitRemote } from './git/models/remote';
+import { getGitHubRemotes } from './git/remote';
 
 class Milestone extends TreeItem {
 
@@ -93,7 +87,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 		let remotes: GitRemote[];
 		try {
-			remotes = await this.getGitHubRemotes();
+			remotes = await getGitHubRemotes(workspace.rootPath);
 		} catch (err) {
 			return [new TreeItem('Not a GitHub repository')];
 		}
@@ -233,21 +227,5 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		}
 		return milestones.slice(0, 2)
 			.map(milestone => milestone.title);
-	}
-
-	private async getGitHubRemotes() {
-		const { stdout } = await exec('git remote -v', { cwd: workspace.rootPath });
-		const remotes: GitRemote[] = [];
-		for (const url of new Set(allMatches(/^[^\s]+\s+([^\s]+)/gm, stdout, 1))) {
-			const m = /([^\s]*github\.com\/([^/]+)\/([^ \.]+)[^\s]*)/.exec(url);
-			if (m) {
-				const url = m[1];
-				const data = await fill(url);
-				if (data) {
-					remotes.push({ url, owner: m[2], repo: m[3], username: data.username });
-				}
-			}
-		}
-		return remotes;
 	}
 }
