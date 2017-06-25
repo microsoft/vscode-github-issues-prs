@@ -121,7 +121,12 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 				for (const milestone of milestones) {
 					let q = `repo:${remote.owner}/${remote.repo} is:open`;
 					if (remote.username) {
-						q += ` assignee:${remote.username}`;
+						try {
+							await this.github.repos.checkCollaborator({ owner: remote.owner, repo: remote.repo, username: remote.username })
+							q += ` assignee:${remote.username}`;
+						} catch (err) {
+							// ignore (not a collaborator)
+						}
 					}
 					if (milestone) {
 						q += ` milestone:"${milestone}"`;
