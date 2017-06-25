@@ -13,6 +13,7 @@ interface GitRemote {
 	owner: string;
 	repo: string;
 	username: string;
+	password: string;
 }
 
 class Milestone extends TreeItem {
@@ -105,6 +106,13 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		const errors: TreeItem[] = [];
 		for (const remote of remotes) {
 			try {
+				if (remote.username && remote.password) {
+					await this.github.authenticate({
+						type: 'basic',
+						username: remote.username,
+						password: remote.password
+					});
+				}
 				const milestones: (string | undefined)[] = await this.getCurrentMilestones(remote);
 				if (!milestones.length) {
 					milestones.push(undefined);
@@ -244,7 +252,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 				const url = m[1];
 				const data = await fill(url);
 				if (data) {
-					remotes.push({ url, owner: m[2], repo: m[3], username: data.username });
+					remotes.push({ url, owner: m[2], repo: m[3], username: data.username, password: data.password });
 				}
 			}
 		}
