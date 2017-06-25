@@ -42,6 +42,8 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	private lastFetch: number;
 	private children: Promise<TreeItem[]> | undefined;
 
+	private username: string | undefined;
+
 	constructor(private context: ExtensionContext) {
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.refresh', this.refresh, this));
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openIssue', this.openIssue, this));
@@ -52,6 +54,15 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.copyMarkdown', this.copyMarkdown, this));
 
 		context.subscriptions.push(window.onDidChangeActiveTextEditor(this.poll, this));
+
+		this.username = workspace.getConfiguration('github').get<string>('username');
+		context.subscriptions.push(workspace.onDidChangeConfiguration(() => {
+			const newUsername = workspace.getConfiguration('github').get<string>('username');
+			if (newUsername !== this.username) {
+				this.username = newUsername;
+				this.refresh();
+			}
+		}));
 	}
 
 	getTreeItem(element: TreeItem): TreeItem {
@@ -120,10 +131,11 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 				for (const milestone of milestones) {
 					let q = `repo:${remote.owner}/${remote.repo} is:open`;
-					if (remote.username) {
+					const username = this.username || remote.username;
+					if (username) {
 						try {
-							await this.github.repos.checkCollaborator({ owner: remote.owner, repo: remote.repo, username: remote.username })
-							q += ` assignee:${remote.username}`;
+							await this.github.repos.checkCollaborator({ owner: remote.owner, repo: remote.repo, username })
+							q += ` assignee:${username}`;
 						} catch (err) {
 							// ignore (not a collaborator)
 						}
