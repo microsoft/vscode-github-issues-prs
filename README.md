@@ -6,6 +6,11 @@ View the issues and PRs assigned to you in the Explorer viewlet. Currently the u
 
 ## Release Notes
 
+### 0.2.0
+
+- Support for private repositories (using Git credentials manager).
+- Add `github.username` setting.
+
 ### 0.1.0
 
 Initial release.
