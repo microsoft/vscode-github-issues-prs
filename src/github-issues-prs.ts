@@ -153,6 +153,11 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 							light: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'light', icon)),
 							dark: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'dark', icon))
 						};
+						issue.command = {
+							title: 'Open',
+							command: item.pull_request ? 'githubIssuesPrs.openPullRequest' : 'githubIssuesPrs.openIssue',
+							arguments: [issue]
+						};
 						issue.contextValue = item.pull_request ? 'pull_request' : 'issue';
 						return issue;
 					}));
