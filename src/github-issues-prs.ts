@@ -75,10 +75,13 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		}
 
 		if (!this.children) {
-			this.fetching = true;
-			this.lastFetch = Date.now();
-			this.children = this.fetchChildren();
-			this.children.then(() => this.fetching = false);
+			try {
+				this.fetching = true;
+				this.lastFetch = Date.now();
+				await (this.children = this.fetchChildren());
+			} finally {
+				this.fetching = false;
+			}
 		}
 
 		return this.children;
