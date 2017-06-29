@@ -6,6 +6,10 @@ View the issues and PRs assigned to you in the Explorer viewlet. Currently the u
 
 ## Release Notes
 
+### 0.3.0
+
+- Bugfixes
+
 ### 0.2.0
 
 - Support for private repositories (using Git credentials manager).
