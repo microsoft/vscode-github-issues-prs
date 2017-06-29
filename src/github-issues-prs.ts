@@ -134,7 +134,9 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 					const username = this.username || remote.username;
 					if (username) {
 						try {
-							await this.github.repos.checkCollaborator({ owner: remote.owner, repo: remote.repo, username })
+							if (remote.username && remote.password) { // check requires push access
+								await this.github.repos.checkCollaborator({ owner: remote.owner, repo: remote.repo, username })
+							}
 							q += ` assignee:${username}`;
 						} catch (err) {
 							// ignore (not a collaborator)
