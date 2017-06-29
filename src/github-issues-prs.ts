@@ -12,8 +12,8 @@ interface GitRemote {
 	url: string;
 	owner: string;
 	repo: string;
-	username: string;
-	password: string;
+	username: string | null;
+	password: string | null;
 }
 
 class Milestone extends TreeItem {
@@ -268,9 +268,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			if (m) {
 				const url = m[1];
 				const data = await fill(url);
-				if (data) {
-					remotes.push({ url, owner: m[2], repo: m[3], username: data.username, password: data.password });
-				}
+				remotes.push({ url, owner: m[2], repo: m[3], username: data && data.username, password: data && data.password });
 			}
 		}
 		return remotes;
