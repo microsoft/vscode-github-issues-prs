@@ -36,8 +36,6 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	private _onDidChangeTreeData = new EventEmitter<TreeItem | undefined>();
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-	private github = new GitHub();
-
 	private fetching = false;
 	private lastFetch: number;
 	private children: Promise<TreeItem[]> | undefined;
@@ -121,14 +119,15 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		const errors: TreeItem[] = [];
 		for (const remote of remotes) {
 			try {
+				const github = new GitHub();
 				if (remote.username && remote.password) {
-					await this.github.authenticate({
+					github.authenticate({
 						type: 'basic',
 						username: remote.username,
 						password: remote.password
 					});
 				}
-				const milestones: (string | undefined)[] = await this.getCurrentMilestones(remote);
+				const milestones: (string | undefined)[] = await this.getCurrentMilestones(github, remote);
 				if (!milestones.length) {
 					milestones.push(undefined);
 				}
@@ -139,7 +138,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 					if (username) {
 						try {
 							if (remote.username && remote.password) { // check requires push access
-								await this.github.repos.checkCollaborator({ owner: remote.owner, repo: remote.repo, username })
+								await github.repos.checkCollaborator({ owner: remote.owner, repo: remote.repo, username })
 							}
 							assignee = username;
 							q += ` assignee:${username}`;
@@ -152,7 +151,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 					}
 
 					const params = { q, sort: 'created', order: 'asc', per_page: 100 };
-					const res = await this.github.search.issues(<any>params);
+					const res = await github.search.issues(<any>params);
 					issues.push(...res.data.items.map((item: any) => {
 						const issue = new Issue(`${item.title} (#${item.number})`, item);
 						const icon = item.pull_request ? 'git-pull-request.svg' : 'bug.svg';
@@ -170,7 +169,9 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 					}));
 				}
 			} catch (err) {
-				if (err.code === 404) {
+				if (err.code === 401 && remote.password) {
+					remotes.push({ ...remote, password: null });
+				} else if (err.code === 404) {
 					errors.push(new TreeItem(`Cannot access ${remote.owner}/${remote.repo}`));
 				} else {
 					throw err;
@@ -207,10 +208,11 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	/* private */ async checkoutPullRequest(issue: Issue) {
+		const github = new GitHub();
 		const p = Uri.parse(issue.item.repository_url).path;
 		const repo = path.basename(p);
 		const owner = path.basename(path.dirname(p));
-		const pr = await this.github.pullRequests.get({ owner, repo, number: issue.item.number });
+		const pr = await github.pullRequests.get({ owner, repo, number: issue.item.number });
 		const login = pr.data.head.repo.owner.login;
 		const clone_url = pr.data.head.repo.clone_url;
 		const remoteBranch = pr.data.head.ref;
@@ -255,8 +257,8 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		copy(`[#${issue.item.number}](${issue.item.html_url})`);
 	}
 
-	private async getCurrentMilestones({ owner, repo }: GitRemote): Promise<string[]> {
-		const res = await this.github.issues.getMilestones({ owner, repo, per_page: 10 })
+	private async getCurrentMilestones(github: GitHub, { owner, repo }: GitRemote): Promise<string[]> {
+		const res = await github.issues.getMilestones({ owner, repo, per_page: 10 })
 		let milestones: any[] = res.data;
 		milestones.sort((a, b) => {
 			const cmp = compareDateStrings(a.due_on, b.due_on);
@@ -278,7 +280,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		for (const url of new Set(allMatches(/^[^\s]+\s+([^\s]+)/gm, stdout, 1))) {
 			const m = /[^\s]*github\.com[/:]([^/]+)\/([^ \.]+)[^\s]*/.exec(url);
 			if (m) {
-				const [ url, owner, repo ] = m;
+				const [url, owner, repo] = m;
 				const data = await fill(url);
 				remotes.push({ url, owner, repo, username: data && data.username, password: data && data.password });
 			}
