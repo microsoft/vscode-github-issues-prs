@@ -103,9 +103,9 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		} catch (err) {
 			return false;
 		}
-
+		
 		// take first one
-		await open(remotes[0].url + '/issues/new');
+		await open(getGitHubUrl(remotes[0].url) + '/issues/new');
 
 		return true;
 	}
@@ -304,4 +304,11 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		}
 		return remotes;
 	}
+}
+
+/**
+ * Helper function which removes the ending `.git`
+ */
+function getGitHubUrl(url: string): string {
+	return url.substr(0, url.lastIndexOf('.git'));
 }
