@@ -6,7 +6,7 @@ View the issues and PRs assigned to you in the Explorer viewlet. Currently the u
 
 ## Release Notes
 
-### 0.3.0
+### 0.3.x
 
 - Bugfixes
 
