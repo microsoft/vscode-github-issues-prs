@@ -1,6 +1,7 @@
 import * as path from 'path';
 
 import * as GitHub from 'github';
+import * as open from 'open';
 import { copy } from 'copy-paste';
 import { fill } from 'git-credential-node';
 
@@ -44,6 +45,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 	constructor(private context: ExtensionContext) {
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.refresh', this.refresh, this));
+		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.createIssue', this.createIssue, this));
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openIssue', this.openIssue, this));
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openPullRequest', this.openIssue, this));
 		// context.subscriptions.push(commands.registerCommand('githubIssuesPrs.checkoutPullRequest', this.checkoutPullRequest, this));
@@ -91,6 +93,21 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			await this.getChildren();
 			this._onDidChangeTreeData.fire();
 		}
+	}
+
+	private async createIssue() {
+		let remotes: GitRemote[];
+
+		try {
+			remotes = await this.getGitHubRemotes();
+		} catch (err) {
+			return false;
+		}
+
+		// take first one
+		await open(remotes[0].url + '/issues/new');
+
+		return true;
 	}
 
 	private async poll() {
