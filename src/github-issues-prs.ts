@@ -103,7 +103,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		} catch (err) {
 			return false;
 		}
-		
+
 		// take first one
 		await open(getGitHubUrl(remotes[0].url) + '/issues/new');
 
