@@ -124,6 +124,11 @@
           ],
           "default": null,
           "description": "The username to use when accessing GitHub. The default is to consult the Git credential manager."
+        },
+        "github.getNoMilestones": {
+          "type": "boolean",
+          "default": false,
+          "description": "If false, output only issues included in milestones"
         }
       }
     }

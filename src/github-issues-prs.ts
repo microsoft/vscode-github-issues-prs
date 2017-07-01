@@ -128,7 +128,8 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 					});
 				}
 				const milestones: (string | undefined)[] = await this.getCurrentMilestones(github, remote);
-				if (!milestones.length) {
+				const onlymilestones = workspace.getConfiguration('github').get<string>('getNoMilestones');
+				if (!milestones.length || onlymilestones) {
 					milestones.push(undefined);
 				}
 
