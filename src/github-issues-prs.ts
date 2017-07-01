@@ -104,10 +104,37 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			return false;
 		}
 
-		// take first one
-		await open(getGitHubUrl(remotes[0].url) + '/issues/new');
+		let urls: string[] = remotes.map(remote => remote.url);
 
-		return true;
+		window.showQuickPick(
+			Promise.resolve(urls),
+			{
+				placeHolder: 'Select the remote you want to create an issue on'
+			}
+		).then((remote: string|null) => {
+			if (!remote) {
+				return;
+			}
+
+
+			// get my object back
+			const selectedRemote = remotes.find(x => x.url === remote);
+			if(!selectedRemote) {
+				return;
+			}
+
+			const github = new GitHub();
+
+			github.repos.get({
+				owner: selectedRemote.owner,
+				repo: selectedRemote.repo
+			}).then(data => {
+				// TODO: Store in cache
+				open(data.data.html_url + '/issues/new')
+			}).catch(() => {
+				window.showInformationMessage('Failed fetching data from the GitHub api!');
+			});
+		});
 	}
 
 	private async poll() {
@@ -304,11 +331,4 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		}
 		return remotes;
 	}
-}
-
-/**
- * Helper function which removes the ending `.git`
- */
-function getGitHubUrl(url: string): string {
-	return url.substr(0, url.lastIndexOf('.git'));
 }
