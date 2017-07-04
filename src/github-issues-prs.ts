@@ -35,6 +35,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 	private _onDidChangeTreeData = new EventEmitter<TreeItem | undefined>();
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+	private config = workspace.getConfiguration('github');
 
 	private fetching = false;
 	private lastFetch: number;
@@ -53,9 +54,10 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 		context.subscriptions.push(window.onDidChangeActiveTextEditor(this.poll, this));
 
-		this.username = workspace.getConfiguration('github').get<string>('username');
+		this.username = this.config.get<string>('username');
 		context.subscriptions.push(workspace.onDidChangeConfiguration(() => {
-			const newUsername = workspace.getConfiguration('github').get<string>('username');
+			this.config = workspace.getConfiguration('github');
+			const newUsername = this.config.get<string>('username');
 			if (newUsername !== this.username) {
 				this.username = newUsername;
 				this.refresh();
@@ -128,12 +130,12 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 					});
 				}
 				const milestones: (string | undefined)[] = await this.getCurrentMilestones(github, remote);
-				const onlymilestones = workspace.getConfiguration('github').get<string>('getNoMilestones');
+				const onlymilestones = this.config.get<string>('getNoMilestones');
 				if (!milestones.length || onlymilestones) {
 					milestones.push(undefined);
 				}
 
-				let milestoneNum = workspace.getConfiguration('github').get<Number>('maxMilestones');
+				let milestoneNum = this.config.get<Number>('maxMilestones');
 				if(typeof milestoneNum === "undefined"){
 					milestoneNum = 2;
 				}
