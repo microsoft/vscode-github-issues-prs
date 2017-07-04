@@ -133,7 +133,14 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 					milestones.push(undefined);
 				}
 
-				for (const milestone of milestones) {
+				let milestoneNum = workspace.getConfiguration('github').get<Number>('maxMilestones');
+				if(typeof milestoneNum === "undefined"){
+					milestoneNum = 2;
+				}
+				for (const [index, milestone] of milestones.entries()) {
+					if(index + 1 > milestoneNum){
+						break;
+					}
 					let q = `repo:${remote.owner}/${remote.repo} is:open`;
 					const username = this.username || remote.username;
 					if (username) {

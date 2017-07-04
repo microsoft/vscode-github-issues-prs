@@ -125,6 +125,11 @@
           "default": null,
           "description": "The username to use when accessing GitHub. The default is to consult the Git credential manager."
         },
+        "github.maxMilestones": {
+          "type": "number",
+          "default": 10,
+          "description": "Number of milestones available"
+        },
         "github.getNoMilestones": {
           "type": "boolean",
           "default": false,
