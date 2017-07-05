@@ -126,7 +126,6 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			if (!selectedRemote) {
 				return;
 			}
-			console.log(selectedRemote.remote);
 
 			const github = new GitHub();
 
