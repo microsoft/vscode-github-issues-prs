@@ -5,7 +5,7 @@ import * as open from 'open';
 import { copy } from 'copy-paste';
 import { fill } from 'git-credential-node';
 
-import { EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, window, workspace, commands } from 'vscode';
+import { EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, QuickPickItem, Uri, TreeItemCollapsibleState, window, workspace, commands } from 'vscode';
 
 import { exec, allMatches, compareDateStrings } from './utils';
 
@@ -30,6 +30,10 @@ class Issue extends TreeItem {
 	constructor(label: string, public item: any) {
 		super(label);
 	}
+}
+
+interface RemoteQuickPickItem extends QuickPickItem {
+	remote: GitRemote;
 }
 
 export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
@@ -104,37 +108,50 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			return false;
 		}
 
-		let urls: string[] = remotes.map(remote => remote.url);
-
-		window.showQuickPick(
-			Promise.resolve(urls),
-			{
-				placeHolder: 'Select the remote you want to create an issue on'
+		let urls: RemoteQuickPickItem[] = remotes.map(remote => {
+			let remoteItem: RemoteQuickPickItem = {
+				label: remote.owner + '/' + remote.repo,
+				remote: remote
 			}
-		).then((remote: string|null) => {
-			if (!remote) {
+
+			return remoteItem;
+		});
+
+		if (!urls.length) {
+			window.showInformationMessage('There is no remote to get data from!');
+			return;
+		}
+
+		const callback = (selectedRemote: RemoteQuickPickItem|null) => {
+			if (!selectedRemote) {
 				return;
 			}
-
-
-			// get my object back
-			const selectedRemote = remotes.find(x => x.url === remote);
-			if(!selectedRemote) {
-				return;
-			}
+			console.log(selectedRemote.remote);
 
 			const github = new GitHub();
 
 			github.repos.get({
-				owner: selectedRemote.owner,
-				repo: selectedRemote.repo
-			}).then(data => {
+				owner: selectedRemote.remote.owner,
+				repo: selectedRemote.remote.repo
+			}).then((data) => {
 				// TODO: Store in cache
 				open(data.data.html_url + '/issues/new')
-			}).catch(() => {
-				window.showInformationMessage('Failed fetching data from the GitHub api!');
 			});
-		});
+
+		};
+
+		// shortcut when there is just one remote
+		if (urls.length === 1) {
+			callback(urls[0]);
+			return;
+		}
+
+		window.showQuickPick(
+			urls,
+			{
+				placeHolder: 'Select the remote you want to create an issue on'
+			}
+		).then(callback);
 	}
 
 	private async poll() {
