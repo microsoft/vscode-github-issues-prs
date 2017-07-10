@@ -129,10 +129,18 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 			const github = new GitHub();
 
+			if (selectedRemote.username && selectedRemote.password) {
+				github.authenticate({
+					type: 'basic',
+					username: selectedRemote.username,
+					password: selectedRemote.password
+				});
+			}
+
 			github.repos.get({
 				owner: selectedRemote.remote.owner,
 				repo: selectedRemote.remote.repo
-			}).then((data) => {
+			}).then(data => {
 				// TODO: Store in cache
 				open(data.data.html_url + '/issues/new')
 			});
