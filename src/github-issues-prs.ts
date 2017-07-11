@@ -130,17 +130,21 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 					});
 				}
 				const milestones: (string | undefined)[] = await this.getCurrentMilestones(github, remote);
-				const onlymilestones = this.config.get<string>('getNoMilestones');
-				if (!milestones.length || onlymilestones) {
+				const milestonesKind = this.config.get<string>('milestonesKind');
+				
+				let milestoneLen = 1;
+				if(milestonesKind === "Latest One"){
+					milestoneLen = 1;
+				} else if(milestonesKind === "Latest Two"){
+					milestoneLen = 2;
+				}
+				
+				if (milestones.length < milestoneLen || milestonesKind === "All") {
 					milestones.push(undefined);
 				}
 
-				let milestoneNum = this.config.get<Number>('maxMilestones');
-				if(typeof milestoneNum === "undefined"){
-					milestoneNum = 2;
-				}
 				for (const [index, milestone] of milestones.entries()) {
-					if(index + 1 > milestoneNum){
+					if(index + 1 > milestoneLen && milestonesKind !== "All"){
 						break;
 					}
 					let q = `repo:${remote.owner}/${remote.repo} is:open`;
