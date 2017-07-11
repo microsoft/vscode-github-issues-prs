@@ -1,10 +1,11 @@
 import * as path from 'path';
 
 import * as GitHub from 'github';
+import * as open from 'open';
 import { copy } from 'copy-paste';
 import { fill } from 'git-credential-node';
 
-import { EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, window, workspace, commands } from 'vscode';
+import { EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, QuickPickItem, Uri, TreeItemCollapsibleState, window, workspace, commands } from 'vscode';
 
 import { exec, allMatches, compareDateStrings } from './utils';
 
@@ -31,6 +32,10 @@ class Issue extends TreeItem {
 	}
 }
 
+interface RemoteQuickPickItem extends QuickPickItem {
+	remote: GitRemote;
+}
+
 export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 	private _onDidChangeTreeData = new EventEmitter<TreeItem | undefined>();
@@ -44,6 +49,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 	constructor(private context: ExtensionContext) {
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.refresh', this.refresh, this));
+		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.createIssue', this.createIssue, this));
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openIssue', this.openIssue, this));
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openPullRequest', this.openIssue, this));
 		// context.subscriptions.push(commands.registerCommand('githubIssuesPrs.checkoutPullRequest', this.checkoutPullRequest, this));
@@ -91,6 +97,68 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			await this.getChildren();
 			this._onDidChangeTreeData.fire();
 		}
+	}
+
+	private async createIssue() {
+		let remotes: GitRemote[];
+
+		try {
+			remotes = await this.getGitHubRemotes();
+		} catch (err) {
+			return false;
+		}
+
+		let urls: RemoteQuickPickItem[] = remotes.map(remote => {
+			let remoteItem: RemoteQuickPickItem = {
+				label: remote.owner + '/' + remote.repo,
+				remote: remote
+			}
+
+			return remoteItem;
+		});
+
+		if (!urls.length) {
+			window.showInformationMessage('There is no remote to get data from!');
+			return;
+		}
+
+		const callback = (selectedRemote: RemoteQuickPickItem|null) => {
+			if (!selectedRemote) {
+				return;
+			}
+
+			const github = new GitHub();
+
+			if (selectedRemote.username && selectedRemote.password) {
+				github.authenticate({
+					type: 'basic',
+					username: selectedRemote.username,
+					password: selectedRemote.password
+				});
+			}
+
+			github.repos.get({
+				owner: selectedRemote.remote.owner,
+				repo: selectedRemote.remote.repo
+			}).then(data => {
+				// TODO: Store in cache
+				open(data.data.html_url + '/issues/new')
+			});
+
+		};
+
+		// shortcut when there is just one remote
+		if (urls.length === 1) {
+			callback(urls[0]);
+			return;
+		}
+
+		window.showQuickPick(
+			urls,
+			{
+				placeHolder: 'Select the remote you want to create an issue on'
+			}
+		).then(callback);
 	}
 
 	private async poll() {
