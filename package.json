@@ -44,7 +44,10 @@
       {
         "command": "githubIssuesPrs.createIssue",
         "title": "Create Issue",
-        "icon": "resources/general/createIssue.svg"
+        "icon": {
+          "light": "thirdparty/octicons/light/plus-small.svg",
+          "dark": "thirdparty/octicons/dark/plus-small.svg"
+        }
       },
       {
         "command": "githubIssuesPrs.openIssue",
@@ -147,6 +150,7 @@
     "@types/copy-paste": "^1.1.30",
     "@types/github": "^7.1.0",
     "@types/node": "*",
+    "@types/open": "0.0.29",
     "tslint": "^5.4.3",
     "typescript": "^2.1.4",
     "vscode": "^1.0.0"
