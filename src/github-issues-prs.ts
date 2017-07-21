@@ -350,10 +350,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			const m = /[^\s]*github\.com[/:]([^/]+)\/([^ ]+)[^\s]*/.exec(url);
 			if (m) {
 				const [url, owner, rawRepo] = m;
-console.log('owner: ' +owner);
-console.log('rawRepo: ' +rawRepo);
 				const repo = rawRepo.replace(/\.git$/, '');
-console.log('repo: ' +repo);
 				const data = await fill(url);
 				remotes.push({ url, owner, repo, username: data && data.username, password: data && data.password });
 			}
