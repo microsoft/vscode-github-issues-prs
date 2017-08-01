@@ -347,9 +347,10 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		const { stdout } = await exec('git remote -v', { cwd: workspace.rootPath });
 		const remotes: GitRemote[] = [];
 		for (const url of new Set(allMatches(/^[^\s]+\s+([^\s]+)/gm, stdout, 1))) {
-			const m = /[^\s]*github\.com[/:]([^/]+)\/([^ \.]+)[^\s]*/.exec(url);
+			const m = /[^\s]*github\.com[/:]([^/]+)\/([^ ]+)[^\s]*/.exec(url);
 			if (m) {
-				const [url, owner, repo] = m;
+				const [url, owner, rawRepo] = m;
+				const repo = rawRepo.replace(/\.git$/, '');
 				const data = await fill(url);
 				remotes.push({ url, owner, repo, username: data && data.username, password: data && data.password });
 			}
