@@ -6,6 +6,11 @@ View the issues and PRs assigned to you in the Explorer viewlet. Currently the u
 
 ## Release Notes
 
+### 0.4.0
+
+- Add action for creating issues (@jens1o)
+- Fix parsing of repository names with dots (@wraith13)
+
 ### 0.3.x
 
 - Bugfixes
