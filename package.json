@@ -124,16 +124,6 @@
           ],
           "default": null,
           "description": "The username to use when accessing GitHub. The default is to consult the Git credential manager."
-        },
-        "github.milestonesKind": {
-          "type": "string",
-          "default": "Latest Two",
-          "enum": [
-            "All",
-            "Latest One",
-            "Latest Two"
-          ],
-          "description": "Getting Milestones kind"
         }
       }
     }

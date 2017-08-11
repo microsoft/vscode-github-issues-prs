@@ -40,11 +40,13 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	private fetching = false;
 	private lastFetch: number;
 	private children: Promise<TreeItem[]> | undefined;
+	private milestoneNum: number = 1;
 
 	private username: string | undefined;
 
 	constructor(private context: ExtensionContext) {
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.refresh', this.refresh, this));
+		// context.subscriptions.push(commands.registerCommand('githubIssuesPrs.addMileStones', this.copyMarkdown, this));
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openIssue', this.openIssue, this));
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openPullRequest', this.openIssue, this));
 		// context.subscriptions.push(commands.registerCommand('githubIssuesPrs.checkoutPullRequest', this.checkoutPullRequest, this));
@@ -83,11 +85,16 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 				this.fetching = false;
 			}
 		}
-
+		
 		return this.children;
 	}
 
+	// private async addMileStone(){
+	// 	this.milestoneNum += 1;
+	// }
+
 	private async refresh() {
+		this.milestoneNum += 1;
 		if (!this.fetching) {
 			this.children = undefined;
 			await this.getChildren();
@@ -130,23 +137,10 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 					});
 				}
 				const milestones: (string | undefined)[] = await this.getCurrentMilestones(github, remote);
-				const milestonesKind = this.config.get<string>('milestonesKind');
-				
-				let milestoneLen = 1;
-				if(milestonesKind === "Latest One"){
-					milestoneLen = 1;
-				} else if(milestonesKind === "Latest Two"){
-					milestoneLen = 2;
-				}
-				
-				if (milestones.length < milestoneLen || milestonesKind === "All") {
+				if (milestones.length < this.milestoneNum) {
 					milestones.push(undefined);
 				}
-
-				for (const [index, milestone] of milestones.entries()) {
-					if(index + 1 > milestoneLen && milestonesKind !== "All"){
-						break;
-					}
+				for (const milestone of milestones) {
 					let q = `repo:${remote.owner}/${remote.repo} is:open`;
 					const username = this.username || remote.username;
 					if (username) {
@@ -212,8 +206,8 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 		if (milestones.length === 1 && milestones[0].label === 'No Milestone') {
 			return milestones[0].issues;
-		}
-
+		} 
+		
 		return milestones;
 	}
 
@@ -284,7 +278,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		if (milestones.length && milestones[0].due_on) {
 			milestones = milestones.filter(milestone => milestone.due_on);
 		}
-		return milestones.slice(0, 2)
+		return milestones.slice(0, this.milestoneNum)
 			.map(milestone => milestone.title);
 	}
 
