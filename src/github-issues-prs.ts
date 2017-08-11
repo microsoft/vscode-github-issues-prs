@@ -1,10 +1,11 @@
 import * as path from 'path';
 
 import * as GitHub from 'github';
+import open = require('open');
 import { copy } from 'copy-paste';
 import { fill } from 'git-credential-node';
 
-import { EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, Uri, TreeItemCollapsibleState, window, workspace, commands } from 'vscode';
+import { EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, QuickPickItem, Uri, TreeItemCollapsibleState, window, workspace, commands } from 'vscode';
 
 import { exec, allMatches, compareDateStrings } from './utils';
 
@@ -31,6 +32,10 @@ class Issue extends TreeItem {
 	}
 }
 
+interface RemoteQuickPickItem extends QuickPickItem {
+	remote: GitRemote;
+}
+
 export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 	private _onDidChangeTreeData = new EventEmitter<TreeItem | undefined>();
@@ -46,7 +51,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 	constructor(private context: ExtensionContext) {
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.refresh', this.refresh, this));
-		// context.subscriptions.push(commands.registerCommand('githubIssuesPrs.addMileStones', this.copyMarkdown, this));
+		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.createIssue', this.createIssue, this));
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openIssue', this.openIssue, this));
 		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openPullRequest', this.openIssue, this));
 		// context.subscriptions.push(commands.registerCommand('githubIssuesPrs.checkoutPullRequest', this.checkoutPullRequest, this));
@@ -100,6 +105,69 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			await this.getChildren();
 			this._onDidChangeTreeData.fire();
 		}
+	}
+
+	private async createIssue() {
+		let remotes: GitRemote[];
+
+		try {
+			remotes = await this.getGitHubRemotes();
+		} catch (err) {
+			return false;
+		}
+
+		let urls: RemoteQuickPickItem[] = remotes.map(remote => {
+			let remoteItem: RemoteQuickPickItem = {
+				label: remote.owner + '/' + remote.repo,
+				description: '',
+				remote: remote
+			}
+
+			return remoteItem;
+		});
+
+		if (!urls.length) {
+			window.showInformationMessage('There is no remote to get data from!');
+			return;
+		}
+
+		const callback = async (selectedRemote: RemoteQuickPickItem | undefined) => {
+			if (!selectedRemote) {
+				return;
+			}
+
+			const github = new GitHub();
+
+			if (selectedRemote.remote.username && selectedRemote.remote.password) {
+				github.authenticate({
+					type: 'basic',
+					username: selectedRemote.remote.username,
+					password: selectedRemote.remote.password
+				});
+			}
+
+			const data = await github.repos.get({
+				owner: selectedRemote.remote.owner,
+				repo: selectedRemote.remote.repo
+			});
+			// TODO: Store in cache
+			open(data.data.html_url + '/issues/new')
+
+		};
+
+		// shortcut when there is just one remote
+		if (urls.length === 1) {
+			callback(urls[0]);
+			return;
+		}
+
+		const pick = await window.showQuickPick(
+			urls,
+			{
+				placeHolder: 'Select the remote you want to create an issue on'
+			}
+		);
+		callback(pick);
 	}
 
 	private async poll() {
@@ -286,9 +354,10 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		const { stdout } = await exec('git remote -v', { cwd: workspace.rootPath });
 		const remotes: GitRemote[] = [];
 		for (const url of new Set(allMatches(/^[^\s]+\s+([^\s]+)/gm, stdout, 1))) {
-			const m = /[^\s]*github\.com[/:]([^/]+)\/([^ \.]+)[^\s]*/.exec(url);
+			const m = /[^\s]*github\.com[/:]([^/]+)\/([^ ]+)[^\s]*/.exec(url);
 			if (m) {
-				const [url, owner, repo] = m;
+				const [url, owner, rawRepo] = m;
+				const repo = rawRepo.replace(/\.git$/, '');
 				const data = await fill(url);
 				remotes.push({ url, owner, repo, username: data && data.username, password: data && data.password });
 			}
