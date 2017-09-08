@@ -13,7 +13,7 @@
     "url": "https://github.com/Microsoft/vscode-github-issues-prs/issues"
   },
   "engines": {
-    "vscode": "^1.13.0"
+    "vscode": "^1.16.0"
   },
   "categories": [
     "Other"

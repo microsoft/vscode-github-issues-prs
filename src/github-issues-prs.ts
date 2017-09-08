@@ -48,25 +48,28 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	private username: string | undefined;
 
 	constructor(private context: ExtensionContext) {
-		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.refresh', this.refresh, this));
-		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.createIssue', this.createIssue, this));
-		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openIssue', this.openIssue, this));
-		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openPullRequest', this.openIssue, this));
-		// context.subscriptions.push(commands.registerCommand('githubIssuesPrs.checkoutPullRequest', this.checkoutPullRequest, this));
-		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.copyNumber', this.copyNumber, this));
-		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.copyText', this.copyText, this));
-		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.copyMarkdown', this.copyMarkdown, this));
+		const subscriptions = context.subscriptions;
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.refresh', this.refresh, this));
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.createIssue', this.createIssue, this));
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.openIssue', this.openIssue, this));
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.openPullRequest', this.openIssue, this));
+		// subscriptions.push(commands.registerCommand('githubIssuesPrs.checkoutPullRequest', this.checkoutPullRequest, this));
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.copyNumber', this.copyNumber, this));
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.copyText', this.copyText, this));
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.copyMarkdown', this.copyMarkdown, this));
 
-		context.subscriptions.push(window.onDidChangeActiveTextEditor(this.poll, this));
+		subscriptions.push(window.onDidChangeActiveTextEditor(this.poll, this));
 
 		this.username = workspace.getConfiguration('github').get<string>('username');
-		context.subscriptions.push(workspace.onDidChangeConfiguration(() => {
+		subscriptions.push(workspace.onDidChangeConfiguration(() => {
 			const newUsername = workspace.getConfiguration('github').get<string>('username');
 			if (newUsername !== this.username) {
 				this.username = newUsername;
 				this.refresh();
 			}
 		}));
+
+		subscriptions.push(workspace.onDidChangeWorkspaceFolders(this.refresh, this));
 	}
 
 	getTreeItem(element: TreeItem): TreeItem {
@@ -169,7 +172,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	private async fetchChildren(element?: TreeItem): Promise<TreeItem[]> {
-		if (!workspace.rootPath) {
+		if (!workspace.workspaceFolders) {
 			return [new TreeItem('No folder opened')];
 		}
 
@@ -277,6 +280,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	/* private */ async checkoutPullRequest(issue: Issue) {
+		// TODO: Move off rootPath
 		const github = new GitHub();
 		const p = Uri.parse(issue.item.repository_url).path;
 		const repo = path.basename(p);
@@ -344,13 +348,22 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	private async getGitHubRemotes() {
-		const { stdout } = await exec('git remote -v', { cwd: workspace.rootPath });
+		let gitout = '';
+		for (const folder of workspace.workspaceFolders || []) {
+			const { stdout } = await exec('git remote -v', { cwd: folder.uri.fsPath });
+			gitout += stdout + '\n';
+		}
 		const remotes: GitRemote[] = [];
-		for (const url of new Set(allMatches(/^[^\s]+\s+([^\s]+)/gm, stdout, 1))) {
+		const seen: Record<string, boolean> = {};
+		for (const url of new Set(allMatches(/^[^\s]+\s+([^\s]+)/gm, gitout, 1))) {
 			const m = /[^\s]*github\.com[/:]([^/]+)\/([^ ]+)[^\s]*/.exec(url);
 			if (m) {
 				const [url, owner, rawRepo] = m;
 				const repo = rawRepo.replace(/\.git$/, '');
+				if (seen[`${owner}/${repo}`]) {
+					continue;
+				}
+				seen[`${owner}/${repo}`] = true;
 				const data = await fill(url);
 				remotes.push({ url, owner, repo, username: data && data.username, password: data && data.password });
 			}
