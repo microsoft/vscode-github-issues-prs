@@ -6,6 +6,11 @@ View the issues and PRs assigned to you in the Explorer viewlet. Currently the u
 
 ## Release Notes
 
+### 0.5.0
+
+- Add multiple workspace folder support
+- Add setting for additional GitHub repositories
+
 ### 0.4.0
 
 - Add action for creating issues (@jens1o)
