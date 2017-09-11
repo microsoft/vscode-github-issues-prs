@@ -46,6 +46,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	private children: Promise<TreeItem[]> | undefined;
 
 	private username: string | undefined;
+	private repositories: string[];
 
 	constructor(private context: ExtensionContext) {
 		const subscriptions = context.subscriptions;
@@ -60,11 +61,16 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 		subscriptions.push(window.onDidChangeActiveTextEditor(this.poll, this));
 
-		this.username = workspace.getConfiguration('github').get<string>('username');
+		const config = workspace.getConfiguration('github');
+		this.username = config.get<string>('username');
+		this.repositories = config.get<string[]>('repositories') || [];
 		subscriptions.push(workspace.onDidChangeConfiguration(() => {
-			const newUsername = workspace.getConfiguration('github').get<string>('username');
-			if (newUsername !== this.username) {
+			const config = workspace.getConfiguration('github');
+			const newUsername = config.get<string>('username');
+			const newRepositories = config.get<string[]>('repositories') || [];
+			if (newUsername !== this.username || JSON.stringify(newRepositories) !== JSON.stringify(this.repositories)) {
 				this.username = newUsername;
+				this.repositories = newRepositories;
 				this.refresh();
 			}
 		}));
@@ -103,11 +109,9 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	private async createIssue() {
-		let remotes: GitRemote[];
 
-		try {
-			remotes = await this.getGitHubRemotes();
-		} catch (err) {
+		const remotes = await this.getGitHubRemotes();
+		if (!remotes.length) {
 			return false;
 		}
 
@@ -172,18 +176,9 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	private async fetchChildren(element?: TreeItem): Promise<TreeItem[]> {
-		if (!workspace.workspaceFolders) {
-			return [new TreeItem('No folder opened')];
-		}
-
-		let remotes: GitRemote[];
-		try {
-			remotes = await this.getGitHubRemotes();
-		} catch (err) {
-			return [new TreeItem('Not a GitHub repository')];
-		}
+		const remotes = await this.getGitHubRemotes();
 		if (!remotes.length) {
-			return [new TreeItem('No GitHub remotes found')];
+			return [new TreeItem('No GitHub repositories found')];
 		}
 
 		let assignee: string | undefined;
@@ -350,8 +345,12 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	private async getGitHubRemotes() {
 		let gitout = '';
 		for (const folder of workspace.workspaceFolders || []) {
-			const { stdout } = await exec('git remote -v', { cwd: folder.uri.fsPath });
-			gitout += stdout + '\n';
+			try {
+				const { stdout } = await exec('git remote -v', { cwd: folder.uri.fsPath });
+				gitout += stdout + '\n';
+			} catch (e) {
+				// ignore
+			}
 		}
 		const remotes: GitRemote[] = [];
 		const seen: Record<string, boolean> = {};
@@ -364,6 +363,19 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 					continue;
 				}
 				seen[`${owner}/${repo}`] = true;
+				const data = await fill(url);
+				remotes.push({ url, owner, repo, username: data && data.username, password: data && data.password });
+			}
+		}
+		for (const rawRepo of this.repositories) {
+			const m = /^\s*([^/\s]+)\/([^/\s]+)\s*$/.exec(rawRepo);
+			if (m) {
+				const [, owner, repo] = m;
+				if (seen[`${owner}/${repo}`]) {
+					continue;
+				}
+				seen[`${owner}/${repo}`] = true;
+				const url = `https://github.com/${owner}/${repo}.git`;
 				const data = await fill(url);
 				remotes.push({ url, owner, repo, username: data && data.username, password: data && data.password });
 			}
