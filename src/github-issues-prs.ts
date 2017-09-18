@@ -326,7 +326,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	private async getCurrentMilestones(github: GitHub, { owner, repo }: GitRemote): Promise<string[]> {
-		const res = await github.issues.getMilestones({ owner, repo, per_page: 10 })
+		const res = await github.issues.getMilestones({ owner, repo, per_page: 10 });
 		let milestones: any[] = res.data;
 		milestones.sort((a, b) => {
 			const cmp = compareDateStrings(a.due_on, b.due_on);
