@@ -120,7 +120,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 				label: remote.owner + '/' + remote.repo,
 				description: '',
 				remote: remote
-			}
+			};
 
 			return remoteItem;
 		});
@@ -150,7 +150,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 				repo: selectedRemote.remote.repo
 			});
 			// TODO: Store in cache
-			open(data.data.html_url + '/issues/new')
+			open(data.data.html_url + '/issues/new');
 
 		};
 
@@ -205,7 +205,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 					if (username) {
 						try {
 							if (remote.username && remote.password) { // check requires push access
-								await github.repos.checkCollaborator({ owner: remote.owner, repo: remote.repo, username })
+								await github.repos.checkCollaborator({ owner: remote.owner, repo: remote.repo, username });
 							}
 							assignee = username;
 							q += ` assignee:${username}`;
