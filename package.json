@@ -13,7 +13,7 @@
     "url": "https://github.com/Microsoft/vscode-github-issues-prs/issues"
   },
   "engines": {
-    "vscode": "^1.13.0"
+    "vscode": "^1.16.0"
   },
   "categories": [
     "Other"
@@ -137,6 +137,11 @@
           ],
           "default": null,
           "description": "The username to use when accessing GitHub. The default is to consult the Git credential manager."
+        },
+        "github.repositories": {
+          "type": "array",
+          "default": [],
+          "description": "A list of repositories to query for issues."
         }
       }
     }

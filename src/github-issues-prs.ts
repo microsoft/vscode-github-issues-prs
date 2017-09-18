@@ -48,28 +48,37 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	private milestoneNum: number = 1;
 
 	private username: string | undefined;
+	private repositories: string[];
 
 	constructor(private context: ExtensionContext) {
-		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.refresh', this.refresh, this));
-		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.createIssue', this.createIssue, this));
-		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openIssue', this.openIssue, this));
-		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.openPullRequest', this.openIssue, this));
-		// context.subscriptions.push(commands.registerCommand('githubIssuesPrs.checkoutPullRequest', this.checkoutPullRequest, this));
-		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.copyNumber', this.copyNumber, this));
-		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.copyText', this.copyText, this));
-		context.subscriptions.push(commands.registerCommand('githubIssuesPrs.copyMarkdown', this.copyMarkdown, this));
 
-		context.subscriptions.push(window.onDidChangeActiveTextEditor(this.poll, this));
+		const subscriptions = context.subscriptions;
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.refresh', this.refresh, this));
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.createIssue', this.createIssue, this));
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.openIssue', this.openIssue, this));
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.openPullRequest', this.openIssue, this));
+		// subscriptions.push(commands.registerCommand('githubIssuesPrs.checkoutPullRequest', this.checkoutPullRequest, this));
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.copyNumber', this.copyNumber, this));
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.copyText', this.copyText, this));
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.copyMarkdown', this.copyMarkdown, this));
 
-		this.username = this.config.get<string>('username');
-		context.subscriptions.push(workspace.onDidChangeConfiguration(() => {
-			this.config = workspace.getConfiguration('github');
-			const newUsername = this.config.get<string>('username');
-			if (newUsername !== this.username) {
+		subscriptions.push(window.onDidChangeActiveTextEditor(this.poll, this));
+
+		const config = workspace.getConfiguration('github');
+		this.username = config.get<string>('username');
+		this.repositories = config.get<string[]>('repositories') || [];
+		subscriptions.push(workspace.onDidChangeConfiguration(() => {
+			const config = workspace.getConfiguration('github');
+			const newUsername = config.get<string>('username');
+			const newRepositories = config.get<string[]>('repositories') || [];
+			if (newUsername !== this.username || JSON.stringify(newRepositories) !== JSON.stringify(this.repositories)) {
 				this.username = newUsername;
+				this.repositories = newRepositories;
 				this.refresh();
 			}
 		}));
+
+		subscriptions.push(workspace.onDidChangeWorkspaceFolders(this.refresh, this));
 	}
 
 	getTreeItem(element: TreeItem): TreeItem {
@@ -108,11 +117,9 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	private async createIssue() {
-		let remotes: GitRemote[];
 
-		try {
-			remotes = await this.getGitHubRemotes();
-		} catch (err) {
+		const remotes = await this.getGitHubRemotes();
+		if (!remotes.length) {
 			return false;
 		}
 
@@ -177,18 +184,9 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	private async fetchChildren(element?: TreeItem): Promise<TreeItem[]> {
-		if (!workspace.rootPath) {
-			return [new TreeItem('No folder opened')];
-		}
-
-		let remotes: GitRemote[];
-		try {
-			remotes = await this.getGitHubRemotes();
-		} catch (err) {
-			return [new TreeItem('Not a GitHub repository')];
-		}
+		const remotes = await this.getGitHubRemotes();
 		if (!remotes.length) {
-			return [new TreeItem('No GitHub remotes found')];
+			return [new TreeItem('No GitHub repositories found')];
 		}
 
 		let assignee: string | undefined;
@@ -284,6 +282,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	/* private */ async checkoutPullRequest(issue: Issue) {
+		// TODO: Move off rootPath
 		const github = new GitHub();
 		const p = Uri.parse(issue.item.repository_url).path;
 		const repo = path.basename(p);
@@ -351,13 +350,39 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	private async getGitHubRemotes() {
-		const { stdout } = await exec('git remote -v', { cwd: workspace.rootPath });
+		let gitout = '';
+		for (const folder of workspace.workspaceFolders || []) {
+			try {
+				const { stdout } = await exec('git remote -v', { cwd: folder.uri.fsPath });
+				gitout += stdout + '\n';
+			} catch (e) {
+				// ignore
+			}
+		}
 		const remotes: GitRemote[] = [];
-		for (const url of new Set(allMatches(/^[^\s]+\s+([^\s]+)/gm, stdout, 1))) {
+		const seen: Record<string, boolean> = {};
+		for (const url of new Set(allMatches(/^[^\s]+\s+([^\s]+)/gm, gitout, 1))) {
 			const m = /[^\s]*github\.com[/:]([^/]+)\/([^ ]+)[^\s]*/.exec(url);
 			if (m) {
 				const [url, owner, rawRepo] = m;
 				const repo = rawRepo.replace(/\.git$/, '');
+				if (seen[`${owner}/${repo}`]) {
+					continue;
+				}
+				seen[`${owner}/${repo}`] = true;
+				const data = await fill(url);
+				remotes.push({ url, owner, repo, username: data && data.username, password: data && data.password });
+			}
+		}
+		for (const rawRepo of this.repositories) {
+			const m = /^\s*([^/\s]+)\/([^/\s]+)\s*$/.exec(rawRepo);
+			if (m) {
+				const [, owner, repo] = m;
+				if (seen[`${owner}/${repo}`]) {
+					continue;
+				}
+				seen[`${owner}/${repo}`] = true;
+				const url = `https://github.com/${owner}/${repo}.git`;
 				const data = await fill(url);
 				remotes.push({ url, owner, repo, username: data && data.username, password: data && data.password });
 			}
