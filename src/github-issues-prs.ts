@@ -40,7 +40,6 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 	private _onDidChangeTreeData = new EventEmitter<TreeItem | undefined>();
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
-	private config = workspace.getConfiguration('github');
 
 	private fetching = false;
 	private lastFetch: number;
@@ -51,7 +50,6 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	private repositories: string[];
 
 	constructor(private context: ExtensionContext) {
-
 		const subscriptions = context.subscriptions;
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.refresh', this.refresh, this));
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.createIssue', this.createIssue, this));
@@ -99,13 +97,10 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 				this.fetching = false;
 			}
 		}
-		
+
 		return this.children;
 	}
 
-	// private async addMileStone(){
-	// 	this.milestoneNum += 1;
-	// }
 
 	private async refresh() {
 		this.milestoneNum += 1;
@@ -272,8 +267,8 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 		if (milestones.length === 1 && milestones[0].label === 'No Milestone') {
 			return milestones[0].issues;
-		} 
-		
+		}
+
 		return milestones;
 	}
 
