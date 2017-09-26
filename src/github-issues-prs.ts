@@ -120,7 +120,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 				label: remote.owner + '/' + remote.repo,
 				description: '',
 				remote: remote
-			}
+			};
 
 			return remoteItem;
 		});
@@ -150,7 +150,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 				repo: selectedRemote.remote.repo
 			});
 			// TODO: Store in cache
-			open(data.data.html_url + '/issues/new')
+			open(data.data.html_url + '/issues/new');
 
 		};
 
@@ -205,7 +205,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 					if (username) {
 						try {
 							if (remote.username && remote.password) { // check requires push access
-								await github.repos.checkCollaborator({ owner: remote.owner, repo: remote.repo, username })
+								await github.repos.checkCollaborator({ owner: remote.owner, repo: remote.repo, username });
 							}
 							assignee = username;
 							q += ` assignee:${username}`;
@@ -326,7 +326,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	private async getCurrentMilestones(github: GitHub, { owner, repo }: GitRemote): Promise<string[]> {
-		const res = await github.issues.getMilestones({ owner, repo, per_page: 10 })
+		const res = await github.issues.getMilestones({ owner, repo, per_page: 10 });
 		let milestones: any[] = res.data;
 		milestones.sort((a, b) => {
 			const cmp = compareDateStrings(a.due_on, b.due_on);
