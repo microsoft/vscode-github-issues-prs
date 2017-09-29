@@ -23,11 +23,12 @@ class Milestone extends TreeItem {
 
 	constructor(label: string) {
 		super(label, TreeItemCollapsibleState.Expanded);
+		this.contextValue = 'milestone';
 	}
 }
 
 class Issue extends TreeItem {
-	constructor(label: string, public item: any) {
+	constructor(label: string, public query: { remote: GitRemote; assignee: string | undefined; }, public item: any) {
 		super(label);
 	}
 }
@@ -52,6 +53,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		const subscriptions = context.subscriptions;
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.refresh', this.refresh, this));
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.createIssue', this.createIssue, this));
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.openMilestone', this.openMilestone, this));
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.openIssue', this.openIssue, this));
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.openPullRequest', this.openIssue, this));
 		// subscriptions.push(commands.registerCommand('githubIssuesPrs.checkoutPullRequest', this.checkoutPullRequest, this));
@@ -201,7 +203,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 				for (const milestone of milestones) {
 					let q = `repo:${remote.owner}/${remote.repo} is:open`;
-					const username = this.username || remote.username;
+					let username = this.username || remote.username || undefined;
 					if (username) {
 						try {
 							if (remote.username && remote.password) { // check requires push access
@@ -211,6 +213,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 							q += ` assignee:${username}`;
 						} catch (err) {
 							// ignore (not a collaborator)
+							username = undefined;
 						}
 					}
 					if (milestone) {
@@ -220,7 +223,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 					const params = { q, sort: 'created', order: 'asc', per_page: 100 };
 					const res = await github.search.issues(<any>params);
 					issues.push(...res.data.items.map((item: any) => {
-						const issue = new Issue(`${item.title} (#${item.number})`, item);
+						const issue = new Issue(`${item.title} (#${item.number})`, { remote, assignee: username }, item);
 						const icon = item.pull_request ? 'git-pull-request.svg' : 'bug.svg';
 						issue.iconPath = {
 							light: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'light', icon)),
@@ -268,6 +271,19 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		}
 
 		return milestones;
+	}
+
+	private openMilestone(milestone: Milestone) {
+		const seen: Record<string, boolean> = {};
+		for (const issue of milestone.issues) {
+			const item = issue.item;
+			const assignee = issue.query.assignee;
+			const url = `https://github.com/${issue.query.remote.owner}/${issue.query.remote.repo}/issues?q=is%3Aopen+milestone%3A%22${item.milestone.title}%22${assignee ? '+assignee%3A' + assignee : ''}`;
+			if (!seen[url]) {
+				seen[url] = true;
+				commands.executeCommand('vscode.open', Uri.parse(url));
+			}
+		}
 	}
 
 	private openIssue(issue: Issue) {
