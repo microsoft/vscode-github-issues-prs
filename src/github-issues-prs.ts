@@ -5,7 +5,7 @@ import open = require('open');
 import { copy } from 'copy-paste';
 import { fill } from 'git-credential-node';
 
-import { EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, QuickPickItem, Uri, TreeItemCollapsibleState, window, workspace, commands } from 'vscode';
+import { EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, QuickPickItem, Uri, TreeItemCollapsibleState, WorkspaceFolder, window, workspace, commands } from 'vscode';
 
 import { exec, allMatches, compareDateStrings } from './utils';
 
@@ -15,6 +15,7 @@ interface GitRemote {
 	repo: string;
 	username: string | null;
 	password: string | null;
+	folders: WorkspaceFolder[];
 }
 
 class Milestone extends TreeItem {
@@ -56,7 +57,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.openMilestone', this.openMilestone, this));
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.openIssue', this.openIssue, this));
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.openPullRequest', this.openIssue, this));
-		// subscriptions.push(commands.registerCommand('githubIssuesPrs.checkoutPullRequest', this.checkoutPullRequest, this));
+		subscriptions.push(commands.registerCommand('githubIssuesPrs.checkoutPullRequest', this.checkoutPullRequest, this));
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.copyNumber', this.copyNumber, this));
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.copyText', this.copyText, this));
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.copyMarkdown', this.copyMarkdown, this));
@@ -290,8 +291,19 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		commands.executeCommand('vscode.open', Uri.parse(issue.item.html_url));
 	}
 
-	/* private */ async checkoutPullRequest(issue: Issue) {
-		// TODO: Move off rootPath
+	private async checkoutPullRequest(issue: Issue) {
+
+		const remote = issue.query.remote;
+		const folder = remote.folders[0];
+		if (!folder) {
+			return window.showInformationMessage(`The repository '${remote.owner}/${remote.repo}' is not checked out in any open workspace folder.`);
+		}
+
+		const status = await exec(`git status --short --porcelain`, { cwd: folder.uri.fsPath });
+		if (status.stdout) {
+			return window.showInformationMessage(`There are local changes in the workspace folder. Commit or stash them before checking out the pull request.`);
+		}
+
 		const github = new GitHub();
 		const p = Uri.parse(issue.item.repository_url).path;
 		const repo = path.basename(p);
@@ -300,10 +312,9 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		const login = pr.data.head.repo.owner.login;
 		const clone_url = pr.data.head.repo.clone_url;
 		const remoteBranch = pr.data.head.ref;
-		const localBranch = `${login}/${remoteBranch}`;
 		try {
 			let remote: string | undefined = undefined;
-			const remotes = await exec(`git remote -v`, { cwd: workspace.rootPath });
+			const remotes = await exec(`git remote -v`, { cwd: folder.uri.fsPath });
 			let m: RegExpExecArray | null;
 			const r = /^([^\s]+)\s+([^\s]+)\s+\(fetch\)/gm;
 			while (m = r.exec(remotes.stdout)) {
@@ -313,16 +324,29 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 				}
 			}
 			if (!remote) {
-				await exec(`git remote add ${login} ${clone_url}`, { cwd: workspace.rootPath });
-				remote = login;
+				remote = await window.showInputBox({
+					prompt: 'Name for the remote to add',
+					value: login
+				});
+				if (!remote) {
+					return;
+				}
+				await exec(`git remote add ${remote} ${clone_url}`, { cwd: folder.uri.fsPath });
 			}
 			try {
-				await exec(`git fetch ${remote} ${remoteBranch}`, { cwd: workspace.rootPath });
+				await exec(`git fetch ${remote} ${remoteBranch}`, { cwd: folder.uri.fsPath });
 			} catch (err) {
 				console.error(err);
 				// git fetch prints to stderr, continue
 			}
-			await exec(`git checkout -b ${localBranch} ${remote}/${remoteBranch}`, { cwd: workspace.rootPath });
+			const localBranch = await window.showInputBox({
+				prompt: 'Name for the local branch to checkout',
+				value: `${login}/${remoteBranch}`
+			});
+			if (!localBranch) {
+				return;
+			}
+			await exec(`git checkout -b ${localBranch} ${remote}/${remoteBranch}`, { cwd: folder.uri.fsPath });
 		} catch (err) {
 			console.error(err);
 			// git checkout prints to stderr, continue
@@ -359,43 +383,42 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	private async getGitHubRemotes() {
-		let gitout = '';
+		const remotes: Record<string, GitRemote> = {};
 		for (const folder of workspace.workspaceFolders || []) {
 			try {
 				const { stdout } = await exec('git remote -v', { cwd: folder.uri.fsPath });
-				gitout += stdout + '\n';
+				for (const url of new Set(allMatches(/^[^\s]+\s+([^\s]+)/gm, stdout, 1))) {
+					const m = /[^\s]*github\.com[/:]([^/]+)\/([^ ]+)[^\s]*/.exec(url);
+					if (m) {
+						const [url, owner, rawRepo] = m;
+						const repo = rawRepo.replace(/\.git$/, '');
+						let remote = remotes[`${owner}/${repo}`];
+						if (!remote) {
+							const data = await fill(url);
+							remote = { url, owner, repo, username: data && data.username, password: data && data.password, folders: [] };
+							remotes[`${owner}/${repo}`] = remote;
+						}
+						remote.folders.push(folder);
+					}
+				}
 			} catch (e) {
 				// ignore
-			}
-		}
-		const remotes: GitRemote[] = [];
-		const seen: Record<string, boolean> = {};
-		for (const url of new Set(allMatches(/^[^\s]+\s+([^\s]+)/gm, gitout, 1))) {
-			const m = /[^\s]*github\.com[/:]([^/]+)\/([^ ]+)[^\s]*/.exec(url);
-			if (m) {
-				const [url, owner, rawRepo] = m;
-				const repo = rawRepo.replace(/\.git$/, '');
-				if (seen[`${owner}/${repo}`]) {
-					continue;
-				}
-				seen[`${owner}/${repo}`] = true;
-				const data = await fill(url);
-				remotes.push({ url, owner, repo, username: data && data.username, password: data && data.password });
 			}
 		}
 		for (const rawRepo of this.repositories) {
 			const m = /^\s*([^/\s]+)\/([^/\s]+)\s*$/.exec(rawRepo);
 			if (m) {
 				const [, owner, repo] = m;
-				if (seen[`${owner}/${repo}`]) {
-					continue;
+				let remote = remotes[`${owner}/${repo}`];
+				if (!remote) {
+					const url = `https://github.com/${owner}/${repo}.git`;
+					const data = await fill(url);
+					remote = { url, owner, repo, username: data && data.username, password: data && data.password, folders: [] };
+					remotes[`${owner}/${repo}`] = remote;
 				}
-				seen[`${owner}/${repo}`] = true;
-				const url = `https://github.com/${owner}/${repo}.git`;
-				const data = await fill(url);
-				remotes.push({ url, owner, repo, username: data && data.username, password: data && data.password });
 			}
 		}
-		return remotes;
+		return Object.keys(remotes)
+			.map(key => remotes[key]);
 	}
 }

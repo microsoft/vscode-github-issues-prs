@@ -62,6 +62,10 @@
         "title": "Open Pull Request"
       },
       {
+        "command": "githubIssuesPrs.checkoutPullRequest",
+        "title": "Checkout Pull Request"
+      },
+      {
         "command": "githubIssuesPrs.copyNumber",
         "title": "Copy Number"
       },
@@ -115,6 +119,11 @@
         },
         {
           "command": "githubIssuesPrs.openPullRequest",
+          "when": "view == githubIssuesPrs && viewItem == pull_request",
+          "group": "1_navigation"
+        },
+        {
+          "command": "githubIssuesPrs.checkoutPullRequest",
           "when": "view == githubIssuesPrs && viewItem == pull_request",
           "group": "1_navigation"
         },
