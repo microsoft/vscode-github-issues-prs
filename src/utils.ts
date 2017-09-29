@@ -31,7 +31,7 @@ export function allMatches(regex: RegExp, string: string, group: number) {
 				}
 			}
 		}
-	}
+	};
 }
 
 export function compareDateStrings(left: string, right: string) {
@@ -44,5 +44,5 @@ export function compareDateStrings(left: string, right: string) {
 	if (!right) {
 		return -1;
 	}
-	return Date.parse(left).valueOf() - Date.parse(right).valueOf()
+	return Date.parse(left).valueOf() - Date.parse(right).valueOf();
 }
