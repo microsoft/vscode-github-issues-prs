@@ -59,7 +59,6 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.copyText', this.copyText, this));
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.copyMarkdown', this.copyMarkdown, this));
 		subscriptions.push(commands.registerCommand('githubIssuesPrs.copyUrl', this.copyUrl, this));
-		subscriptions.push(commands.registerCommand('githubIssuesPrs.copySummary', this.copySummary, this));
 
 		subscriptions.push(window.onDidChangeActiveTextEditor(this.poll, this));
 
@@ -331,9 +330,6 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		copy(issue.item.html_url);
 	}
 
-	private copySummary(issue: Issue) {
-		copy(issue.item.body);
-	}
 
 	private async getCurrentMilestones(github: GitHub, { owner, repo }: GitRemote): Promise<string[]> {
 		const res = await github.issues.getMilestones({ owner, repo, per_page: 10 })
