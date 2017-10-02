@@ -76,6 +76,10 @@
       {
         "command": "githubIssuesPrs.copyMarkdown",
         "title": "Copy Markdown"
+      },
+      {
+        "command": "githubIssuesPrs.copyUrl",
+        "title": "Copy Url"
       }
     ],
     "menus": {
@@ -118,6 +122,11 @@
           "group": "9_cutcopypaste"
         },
         {
+          "command": "githubIssuesPrs.copyUrl",
+          "when": "view == githubIssuesPrs && viewItem == issue",
+          "group": "9_cutcopypaste"
+        },
+        {
           "command": "githubIssuesPrs.openPullRequest",
           "when": "view == githubIssuesPrs && viewItem == pull_request",
           "group": "1_navigation"
@@ -139,6 +148,11 @@
         },
         {
           "command": "githubIssuesPrs.copyMarkdown",
+          "when": "view == githubIssuesPrs && viewItem == pull_request",
+          "group": "9_cutcopypaste"
+        },
+        {
+          "command": "githubIssuesPrs.copyUrl",
           "when": "view == githubIssuesPrs && viewItem == pull_request",
           "group": "9_cutcopypaste"
         }
