@@ -6,6 +6,13 @@ View the issues and PRs assigned to you in the Explorer viewlet. Currently the u
 
 ## Release Notes
 
+### 0.6.0
+
+- Add Copy Url command (@Ikuyadeu)
+- Fix tslint semicolon setting (@Ikuyadeu)
+- Add Open Milestone command
+- Add Checkout Pull Request command
+
 ### 0.5.0
 
 - Add multiple workspace folder support
