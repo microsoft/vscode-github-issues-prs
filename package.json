@@ -28,7 +28,8 @@
       "explorer": [
         {
           "id": "githubIssuesPrs",
-          "name": "GitHub Issues and PRs"
+          "name": "GitHub Issues and PRs",
+          "when": "is-running-a-github-repo"
         }
       ]
     },
