@@ -310,7 +310,8 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		const repo = path.basename(p);
 		const owner = path.basename(path.dirname(p));
 		const pr = await github.pullRequests.get({ owner, repo, number: issue.item.number });
-		const login = pr.data.head.repo.owner.login;
+		const repo_login = pr.data.head.repo.owner.login;
+		const user_login = pr.data.user.login;
 		const clone_url = pr.data.head.repo.clone_url;
 		const remoteBranch = pr.data.head.ref;
 		try {
@@ -319,7 +320,11 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			let m: RegExpExecArray | null;
 			const r = /^([^\s]+)\s+([^\s]+)\s+\(fetch\)/gm;
 			while (m = r.exec(remotes.stdout)) {
-				if (m[2] === clone_url) {
+				let fetch_url = m[2];
+				if (!fetch_url.endsWith('.git')) {
+					fetch_url += '.git';
+				}
+				if (fetch_url === clone_url) {
 					remote = m[1];
 					break;
 				}
@@ -327,7 +332,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			if (!remote) {
 				remote = await window.showInputBox({
 					prompt: 'Name for the remote to add',
-					value: login
+					value: repo_login
 				});
 				if (!remote) {
 					return;
@@ -342,7 +347,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			}
 			const localBranch = await window.showInputBox({
 				prompt: 'Name for the local branch to checkout',
-				value: `${login}/${remoteBranch}`
+				value: remoteBranch.startsWith(`${user_login}/`) ? remoteBranch : `${user_login}/${remoteBranch}`
 			});
 			if (!localBranch) {
 				return;
