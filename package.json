@@ -177,7 +177,7 @@
         },
         "github.host": {
           "type": "string",
-          "default": "https://api.github.com",
+          "default": "github.com",
           "description": "The host name to accessing GitHub. Please edit here if you use GitHub Enterprise"
         }
       }
