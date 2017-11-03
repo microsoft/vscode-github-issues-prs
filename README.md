@@ -6,6 +6,11 @@ View the issues and PRs assigned to you in the Explorer viewlet. Currently the u
 
 ## Release Notes
 
+### 0.7.0
+
+- Checkout Pull Request: Improve finding existing remote and branch
+- 'Multi-root ready' keyword
+
 ### 0.6.0
 
 - Add Copy Url command (@Ikuyadeu)

@@ -2,7 +2,7 @@
   "name": "github-issues-prs",
   "displayName": "GitHub Issues and PRs",
   "description": "View the issues and PRs assigned to you in the Explorer viewlet.",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "publisher": "ms-vscode",
   "repository": {
     "type": "git",
@@ -17,6 +17,9 @@
   },
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "multi-root ready"
   ],
   "activationEvents": [
     "onView:githubIssuesPrs"
