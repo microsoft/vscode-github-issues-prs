@@ -442,9 +442,6 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	private getURL() {
-		if(this.host === undefined){
-			return "github\.com";
-		}
 		return encodeURIComponent(this.host);
 	}
 }
