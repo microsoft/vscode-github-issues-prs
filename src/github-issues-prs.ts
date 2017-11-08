@@ -48,6 +48,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	private children: Promise<TreeItem[]> | undefined;
 
 	private username: string | undefined;
+	private host: string;
 	private repositories: string[];
 
 	constructor(private context: ExtensionContext) {
@@ -68,13 +69,16 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		const config = workspace.getConfiguration('github');
 		this.username = config.get<string>('username');
 		this.repositories = config.get<string[]>('repositories') || [];
+		this.host = config.get<string>('host') || 'github.com';
 		subscriptions.push(workspace.onDidChangeConfiguration(() => {
 			const config = workspace.getConfiguration('github');
 			const newUsername = config.get<string>('username');
 			const newRepositories = config.get<string[]>('repositories') || [];
-			if (newUsername !== this.username || JSON.stringify(newRepositories) !== JSON.stringify(this.repositories)) {
+			const newHost = config.get<string>('host');
+			if (newUsername !== this.username || JSON.stringify(newRepositories) !== JSON.stringify(this.repositories) || newHost !== this.host) {
 				this.username = newUsername;
 				this.repositories = newRepositories;
+				this.host = newHost || 'github.com';
 				this.refresh();
 			}
 		}));
@@ -139,7 +143,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 				return;
 			}
 
-			const github = new GitHub();
+			const github = new GitHub(this.getAPIOption());
 
 			if (selectedRemote.remote.username && selectedRemote.remote.password) {
 				github.authenticate({
@@ -190,7 +194,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		const errors: TreeItem[] = [];
 		for (const remote of remotes) {
 			try {
-				const github = new GitHub();
+				const github = new GitHub(this.getAPIOption());
 				if (remote.username && remote.password) {
 					github.authenticate({
 						type: 'basic',
@@ -280,7 +284,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		for (const issue of milestone.issues) {
 			const item = issue.item;
 			const assignee = issue.query.assignee;
-			const url = `https://github.com/${issue.query.remote.owner}/${issue.query.remote.repo}/issues?q=is%3Aopen+milestone%3A%22${item.milestone.title}%22${assignee ? '+assignee%3A' + assignee : ''}`;
+			const url = `https://${this.host}/${issue.query.remote.owner}/${issue.query.remote.repo}/issues?q=is%3Aopen+milestone%3A%22${item.milestone.title}%22${assignee ? '+assignee%3A' + assignee : ''}`;
 			if (!seen[url]) {
 				seen[url] = true;
 				commands.executeCommand('vscode.open', Uri.parse(url));
@@ -305,7 +309,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			return window.showInformationMessage(`There are local changes in the workspace folder. Commit or stash them before checking out the pull request.`);
 		}
 
-		const github = new GitHub();
+		const github = new GitHub(this.getAPIOption());
 		const p = Uri.parse(issue.item.repository_url).path;
 		const repo = path.basename(p);
 		const owner = path.basename(path.dirname(p));
@@ -399,7 +403,8 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			try {
 				const { stdout } = await exec('git remote -v', { cwd: folder.uri.fsPath });
 				for (const url of new Set(allMatches(/^[^\s]+\s+([^\s]+)/gm, stdout, 1))) {
-					const m = /[^\s]*github\.com[/:]([^/]+)\/([^ ]+)[^\s]*/.exec(url);
+					const m = new RegExp(`[^\\s]*${this.host.replace(/\./g, '\\.')}[/:]([^/]+)\/([^ ]+)[^\\s]*`).exec(url);
+					
 					if (m) {
 						const [url, owner, rawRepo] = m;
 						const repo = rawRepo.replace(/\.git$/, '');
@@ -422,7 +427,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 				const [, owner, repo] = m;
 				let remote = remotes[`${owner}/${repo}`];
 				if (!remote) {
-					const url = `https://github.com/${owner}/${repo}.git`;
+					const url = `https://${this.host}/${owner}/${repo}.git`;
 					const data = await fill(url);
 					remote = { url, owner, repo, username: data && data.username, password: data && data.password, folders: [] };
 					remotes[`${owner}/${repo}`] = remote;
@@ -431,5 +436,13 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		}
 		return Object.keys(remotes)
 			.map(key => remotes[key]);
+	}
+
+	private getAPIOption() {
+		if (this.host === 'github.com') {
+			return {host: 'api.github.com'};
+		} else{
+			return {host: this.host, pathPrefix: '/api/v3'};
+		}
 	}
 }
