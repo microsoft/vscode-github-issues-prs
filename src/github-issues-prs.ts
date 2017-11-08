@@ -69,7 +69,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		const config = workspace.getConfiguration('github');
 		this.username = config.get<string>('username');
 		this.repositories = config.get<string[]>('repositories') || [];
-		this.host = config.get<string>('host') || "github.com";
+		this.host = config.get<string>('host') || 'github.com';
 		subscriptions.push(workspace.onDidChangeConfiguration(() => {
 			const config = workspace.getConfiguration('github');
 			const newUsername = config.get<string>('username');
@@ -78,7 +78,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			if (newUsername !== this.username || JSON.stringify(newRepositories) !== JSON.stringify(this.repositories) || newHost !== this.host) {
 				this.username = newUsername;
 				this.repositories = newRepositories;
-				this.host = newHost || "github.com";
+				this.host = newHost || 'github.com';
 				this.refresh();
 			}
 		}));
@@ -284,7 +284,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		for (const issue of milestone.issues) {
 			const item = issue.item;
 			const assignee = issue.query.assignee;
-			const url = `https://${this.getURL}/${issue.query.remote.owner}/${issue.query.remote.repo}/issues?q=is%3Aopen+milestone%3A%22${item.milestone.title}%22${assignee ? '+assignee%3A' + assignee : ''}`;
+			const url = `https://${this.host}/${issue.query.remote.owner}/${issue.query.remote.repo}/issues?q=is%3Aopen+milestone%3A%22${item.milestone.title}%22${assignee ? '+assignee%3A' + assignee : ''}`;
 			if (!seen[url]) {
 				seen[url] = true;
 				commands.executeCommand('vscode.open', Uri.parse(url));
@@ -398,7 +398,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			try {
 				const { stdout } = await exec('git remote -v', { cwd: folder.uri.fsPath });
 				for (const url of new Set(allMatches(/^[^\s]+\s+([^\s]+)/gm, stdout, 1))) {
-					const m = new RegExp(`[^\s]*${this.getURL().replace(/\./g, '\\.')}[/:]([^/]+)\/([^ ]+)[^\s]*`).exec(url);
+					const m = new RegExp(`[^\\s]*${this.host.replace(/\./g, '\\.')}[/:]([^/]+)\/([^ ]+)[^\\s]*`).exec(url);
 					
 					if (m) {
 						const [url, owner, rawRepo] = m;
@@ -434,14 +434,10 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	private getAPIOption() {
-		if (this.host === "github.com") {
-			return {host: "api.github.com"};
+		if (this.host === 'github.com') {
+			return {host: 'api.github.com'};
 		} else{
-			return {host: this.host, pathPrefix: "/api/v3"};
+			return {host: this.host, pathPrefix: '/api/v3'};
 		}
-	}
-
-	private getURL() {
-		return encodeURIComponent(this.host);
 	}
 }
