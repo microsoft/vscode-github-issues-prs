@@ -46,6 +46,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	private fetching = false;
 	private lastFetch: number;
 	private children: Promise<TreeItem[]> | undefined;
+	private milestoneNum: number = 1;
 
 	private username: string | undefined;
 	private host: string;
@@ -108,7 +109,9 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		return this.children;
 	}
 
+
 	private async refresh() {
+		this.milestoneNum += 1;
 		if (!this.fetching) {
 			this.children = undefined;
 			await this.getChildren();
@@ -203,10 +206,9 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 					});
 				}
 				const milestones: (string | undefined)[] = await this.getCurrentMilestones(github, remote);
-				if (!milestones.length) {
+				if (milestones.length < this.milestoneNum) {
 					milestones.push(undefined);
 				}
-
 				for (const milestone of milestones) {
 					let q = `repo:${remote.owner}/${remote.repo} is:open`;
 					let username = this.username || remote.username || undefined;
@@ -393,7 +395,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		if (milestones.length && milestones[0].due_on) {
 			milestones = milestones.filter(milestone => milestone.due_on);
 		}
-		return milestones.slice(0, 2)
+		return milestones.slice(0, this.milestoneNum)
 			.map(milestone => milestone.title);
 	}
 
