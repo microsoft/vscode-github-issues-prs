@@ -35,19 +35,6 @@ export function allMatches(regex: RegExp, string: string, group: number) {
 	};
 }
 
-export function compareDateStrings(left: string, right: string) {
-	if (!left && !right) {
-		return 0;
-	}
-	if (!left) {
-		return 1;
-	}
-	if (!right) {
-		return -1;
-	}
-	return Date.parse(left).valueOf() - Date.parse(right).valueOf();
-}
-
 export async function fetchAll(github: GitHub, first: Promise<any>) {
 	const all = [];
 

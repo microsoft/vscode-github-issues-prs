@@ -4,10 +4,11 @@ import * as GitHub from 'github';
 import open = require('open');
 import { copy } from 'copy-paste';
 import { fill } from 'git-credential-node';
+import * as moment from 'moment';
 
 import { EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, QuickPickItem, Uri, TreeItemCollapsibleState, WorkspaceFolder, window, workspace, commands } from 'vscode';
 
-import { exec, allMatches, compareDateStrings, fetchAll } from './utils';
+import { exec, allMatches, fetchAll } from './utils';
 
 interface GitRemote {
 	url: string;
@@ -231,16 +232,31 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			milestone.issues.push(issue);
 		}
 
-		if (milestones.length === 1 && milestones[0].label === 'No Milestone') {
-			return milestones[0].issues;
+		for (const milestone of milestones) {
+			milestone.label = `${milestone.label} (${milestone.issues.length})`;
 		}
 
 		milestones.sort((a, b) => {
-			const cmp = compareDateStrings(a.item && a.item.due_on, b.item && b.item.due_on);
-			if (cmp) {
-				return cmp;
+			// No Milestone
+			if (!a.item) {
+				return 1;
+			} else if (!b.item) {
+				return -1;
 			}
-			return a.label.localeCompare(b.label);
+
+			const t1 = this.parseDueOn(a);
+			const t2 = this.parseDueOn(b);
+			if (t1 && t2) {
+				if (!t1.isSame(t2)) {
+					return t1.isBefore(t2) ? -1 : 1;
+				}
+			} else if (t1) {
+				return -1;
+			} else if (t2) {
+				return 1;
+			}
+
+			return a.item.title.localeCompare(b.item.title);
 		});
 
 		if (milestones.length) {
@@ -248,6 +264,26 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		}
 
 		return milestones;
+	}
+
+	private parseDueOn(m: Milestone) {
+		if (!m.item) {
+			return;
+		}
+
+		if (m.item.due_on) {
+			const t = moment.utc(m.item.due_on, 'YYYY-MM-DDTHH:mm:ssZ');
+			if (t.isValid()) {
+				return t;
+			}
+		}
+
+		if (m.item.title) {
+			const t = moment.utc(m.item.title, 'MMMM YYYY');
+			if (t.isValid()) {
+				return t.add(14, 'days'); // "best guess"
+			}
+		}
 	}
 
 	private async fetchAllIssues(remotes: GitRemote[], assignee: string, username?: string, password?: string) {
@@ -266,9 +302,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			order: 'asc',
 			per_page: 100
 		};
-		const start = Date.now();
 		const items = await fetchAll(github, github.search.issues(<any>params));
-		console.log(`Time to load all issues: ${Date.now() - start} ms`);
 
 		return items
 			.map((item: any) => ({
