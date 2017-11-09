@@ -7,7 +7,7 @@ import { fill } from 'git-credential-node';
 
 import { EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, QuickPickItem, Uri, TreeItemCollapsibleState, WorkspaceFolder, window, workspace, commands } from 'vscode';
 
-import { exec, allMatches, compareDateStrings } from './utils';
+import { exec, allMatches, compareDateStrings, fetchAll } from './utils';
 
 interface GitRemote {
 	url: string;
@@ -22,8 +22,8 @@ class Milestone extends TreeItem {
 
 	public issues: Issue[] = [];
 
-	constructor(label: string) {
-		super(label, TreeItemCollapsibleState.Expanded);
+	constructor(label: string, public item: any | undefined) {
+		super(label, TreeItemCollapsibleState.Collapsed);
 		this.contextValue = 'milestone';
 	}
 }
@@ -189,73 +189,30 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			return [new TreeItem('No GitHub repositories found')];
 		}
 
-		let assignee: string | undefined;
-		const issues: Issue[] = [];
-		const errors: TreeItem[] = [];
-		for (const remote of remotes) {
-			try {
-				const github = new GitHub(this.getAPIOption());
-				if (remote.username && remote.password) {
-					github.authenticate({
-						type: 'basic',
-						username: remote.username,
-						password: remote.password
-					});
-				}
-				const milestones: (string | undefined)[] = await this.getCurrentMilestones(github, remote);
-				if (!milestones.length) {
-					milestones.push(undefined);
-				}
+		const { username, password } = remotes[0];
+		const assignee = this.username || username || undefined;
+		if (!assignee) {
+			const configure = new TreeItem('Configure "github.username" in settings');
+			configure.command = {
+				title: 'Open Settings',
+				command: 'workbench.action.openGlobalSettings'
+			};
+			return [configure];
+		}
 
-				for (const milestone of milestones) {
-					let q = `repo:${remote.owner}/${remote.repo} is:open`;
-					let username = this.username || remote.username || undefined;
-					if (username) {
-						try {
-							if (remote.username && remote.password) { // check requires push access
-								await github.repos.checkCollaborator({ owner: remote.owner, repo: remote.repo, username });
-							}
-							assignee = username;
-							q += ` assignee:${username}`;
-						} catch (err) {
-							// ignore (not a collaborator)
-							username = undefined;
-						}
-					}
-					if (milestone) {
-						q += ` milestone:"${milestone}"`;
-					}
-
-					const params = { q, sort: 'created', order: 'asc', per_page: 100 };
-					const res = await github.search.issues(<any>params);
-					issues.push(...res.data.items.map((item: any) => {
-						const issue = new Issue(`${item.title} (#${item.number})`, { remote, assignee: username }, item);
-						const icon = item.pull_request ? 'git-pull-request.svg' : 'bug.svg';
-						issue.iconPath = {
-							light: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'light', icon)),
-							dark: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'dark', icon))
-						};
-						issue.command = {
-							title: 'Open',
-							command: item.pull_request ? 'githubIssuesPrs.openPullRequest' : 'githubIssuesPrs.openIssue',
-							arguments: [issue]
-						};
-						issue.contextValue = item.pull_request ? 'pull_request' : 'issue';
-						return issue;
-					}));
-				}
-			} catch (err) {
-				if (err.code === 401 && remote.password) {
-					remotes.push({ ...remote, password: null });
-				} else if (err.code === 404) {
-					errors.push(new TreeItem(`Cannot access ${remote.owner}/${remote.repo}`));
-				} else {
-					throw err;
-				}
+		let issues: Issue[];
+		try {
+			issues = await this.fetchAllIssues(remotes, assignee, username || undefined, password || undefined);
+		} catch (err) {
+			if (err.code === 401 && password) {
+				issues = await this.fetchAllIssues(remotes, assignee, username || undefined, undefined);
+			} else {
+				throw err;
 			}
 		}
+
 		if (!issues.length) {
-			return errors.length ? errors : [new TreeItem(`No issues found for ${assignee ? '@' + assignee : 'any user'}`)];
+			return [new TreeItem(`No issues found for @${assignee}`)];
 		}
 
 		const milestoneIndex: { [title: string]: Milestone; } = {};
@@ -265,9 +222,11 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			const milestoneLabel = m && m.title || 'No Milestone';
 			let milestone = milestoneIndex[milestoneLabel];
 			if (!milestone) {
-				milestone = new Milestone(milestoneLabel);
+				milestone = new Milestone(milestoneLabel, m);
 				milestoneIndex[milestoneLabel] = milestone;
 				milestones.push(milestone);
+			} else if (m && m.due_on && !(milestone.item && milestone.item.due_on)) {
+				milestone.item = m;
 			}
 			milestone.issues.push(issue);
 		}
@@ -276,7 +235,62 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			return milestones[0].issues;
 		}
 
+		milestones.sort((a, b) => {
+			const cmp = compareDateStrings(a.item && a.item.due_on, b.item && b.item.due_on);
+			if (cmp) {
+				return cmp;
+			}
+			return a.label.localeCompare(b.label);
+		});
+
+		if (milestones.length) {
+			milestones[0].collapsibleState = TreeItemCollapsibleState.Expanded;
+		}
+
 		return milestones;
+	}
+
+	private async fetchAllIssues(remotes: GitRemote[], assignee: string, username?: string, password?: string) {
+		const github = new GitHub(this.getAPIOption());
+		if (username && password) {
+			github.authenticate({
+				type: 'basic',
+				username,
+				password
+			});
+		}
+
+		const params = {
+			q: `is:open assignee:${assignee}`,
+			sort: 'created',
+			order: 'asc',
+			per_page: 100
+		};
+		const start = Date.now();
+		const items = await fetchAll(github, github.search.issues(<any>params));
+		console.log(`Time to load all issues: ${Date.now() - start} ms`);
+
+		return items
+			.map((item: any) => ({
+				item,
+				remote: remotes.find(remote => item.repository_url.endsWith(`/${remote.owner}/${remote.repo}`))
+			}))
+			.filter(({ remote }) => !!remote)
+			.map(({ item, remote }) => {
+				const issue = new Issue(`${item.title} (#${item.number})`, { remote: remote!, assignee }, item);
+				const icon = item.pull_request ? 'git-pull-request.svg' : 'bug.svg';
+				issue.iconPath = {
+					light: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'light', icon)),
+					dark: this.context.asAbsolutePath(path.join('thirdparty', 'octicons', 'dark', icon))
+				};
+				issue.command = {
+					title: 'Open',
+					command: item.pull_request ? 'githubIssuesPrs.openPullRequest' : 'githubIssuesPrs.openIssue',
+					arguments: [issue]
+				};
+				issue.contextValue = item.pull_request ? 'pull_request' : 'issue';
+				return issue;
+			});
 	}
 
 	private openMilestone(milestone: Milestone) {
@@ -372,24 +386,6 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 
 	private copyUrl(issue: Issue) {
 		copy(issue.item.html_url);
-	}
-
-
-	private async getCurrentMilestones(github: GitHub, { owner, repo }: GitRemote): Promise<string[]> {
-		const res = await github.issues.getMilestones({ owner, repo, per_page: 10 });
-		let milestones: any[] = res.data;
-		milestones.sort((a, b) => {
-			const cmp = compareDateStrings(a.due_on, b.due_on);
-			if (cmp) {
-				return cmp;
-			}
-			return a.title.localeCompare(b.title);
-		});
-		if (milestones.length && milestones[0].due_on) {
-			milestones = milestones.filter(milestone => milestone.due_on);
-		}
-		return milestones.slice(0, 2)
-			.map(milestone => milestone.title);
 	}
 
 	private async getGitHubRemotes() {

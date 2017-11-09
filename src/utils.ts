@@ -1,4 +1,5 @@
 import * as cp from 'child_process';
+import * as GitHub from 'github';
 
 export interface ExecResult {
 	error: Error;
@@ -45,4 +46,18 @@ export function compareDateStrings(left: string, right: string) {
 		return -1;
 	}
 	return Date.parse(left).valueOf() - Date.parse(right).valueOf();
+}
+
+export async function fetchAll(github: GitHub, first: Promise<any>) {
+	const all = [];
+
+	let res = await first;
+	all.push(...res.data.items);
+
+	while (github.hasNextPage(res)) {
+		res = await github.getNextPage(res);
+		all.push(...res.data.items);
+	}
+
+	return all;
 }
