@@ -6,6 +6,11 @@ View the issues and PRs assigned to you in the Explorer viewlet. Currently the u
 
 ## Release Notes
 
+### 0.8.0
+
+- Show all milestones and improve sorting
+- Open single page for Open Milestone
+
 ### 0.7.0
 
 - Checkout Pull Request: Improve finding existing remote and branch
