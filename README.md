@@ -6,6 +6,10 @@ View the issues and PRs assigned to you in the Explorer viewlet. Currently the u
 
 ## Release Notes
 
+### 0.9.0
+
+- Support for GitHub Enterprise with the `"github.host"` setting (@Ikuyadeu)
+
 ### 0.8.0
 
 - Show all milestones and improve sorting

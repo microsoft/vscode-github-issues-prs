@@ -2,7 +2,7 @@
   "name": "github-issues-prs",
   "displayName": "GitHub Issues and PRs",
   "description": "View the issues and PRs assigned to you in the Explorer viewlet.",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "publisher": "ms-vscode",
   "repository": {
     "type": "git",
@@ -177,6 +177,11 @@
           "type": "array",
           "default": [],
           "description": "A list of repositories to query for issues."
+        },
+        "github.host": {
+          "type": "string",
+          "default": "github.com",
+          "description": "The host name to access GitHub. Change this to your GitHub Enterprise host."
         }
       }
     }
