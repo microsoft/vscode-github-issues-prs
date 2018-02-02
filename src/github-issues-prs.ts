@@ -45,7 +45,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
 	private fetching = false;
-	private lastFetch: number;
+	private lastFetch: number | undefined;
 	private children: Promise<TreeItem[]> | undefined;
 
 	private username: string | undefined;
