@@ -188,6 +188,8 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		const remotes = await this.getGitHubRemotes();
 		if (!remotes.length) {
 			return [new TreeItem('No GitHub repositories found')];
+		} else {
+			commands.executeCommand('setContext', 'is-running-a-github-repo', true);
 		}
 
 		const { username, password } = remotes[0];
