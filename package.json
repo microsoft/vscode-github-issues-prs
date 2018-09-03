@@ -197,7 +197,7 @@
     "@types/open": "0.0.29",
     "tslint": "^5.4.3",
     "typescript": "^2.1.4",
-    "vscode": "^1.1.17"
+    "vscode": "^1.1.21"
   },
   "dependencies": {
     "@octokit/rest": "^15.10.0",
