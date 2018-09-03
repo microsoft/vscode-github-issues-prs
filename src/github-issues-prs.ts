@@ -1,6 +1,6 @@
 import * as path from 'path';
 
-import * as GitHub from 'github';
+import * as GitHub from '@octokit/rest';
 import open = require('open');
 import { copy } from 'copy-paste';
 import { fill } from 'git-credential-node';
@@ -357,10 +357,10 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		const repo = path.basename(p);
 		const owner = path.basename(path.dirname(p));
 		const pr = await github.pullRequests.get({ owner, repo, number: issue.item.number });
-		const repo_login = pr.data.head.repo.owner.login;
-		const user_login = pr.data.user.login;
-		const clone_url = pr.data.head.repo.clone_url;
-		const remoteBranch = pr.data.head.ref;
+		const repo_login = pr.data.head!.repo.owner.login;
+		const user_login = pr.data.user!.login;
+		const clone_url = pr.data.head!.repo.clone_url;
+		const remoteBranch = pr.data.head!.ref;
 		try {
 			let remote: string | undefined = undefined;
 			const remotes = await exec(`git remote -v`, { cwd: folder.uri.fsPath });

@@ -1,5 +1,5 @@
 import * as cp from 'child_process';
-import * as GitHub from 'github';
+import * as GitHub from '@octokit/rest';
 
 export interface ExecResult {
 	error: Error;
