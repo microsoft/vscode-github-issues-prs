@@ -1,10 +1,14 @@
-# GitHub Issues and PRs
+# GitHub Issues
 
-View the issues and PRs assigned to you in the Explorer viewlet. Currently the username and repository are taken from the Git configuration and only issues assigned to that user and to the next two milestones are shown.
+View the issues assigned to you in the Explorer viewlet. Currently the username and repository are taken from the Git configuration and only issues assigned to that user and to the next two milestones are shown.
 
-![GitHub Issues and PRs in Action](images/in_action.gif)
+![GitHub Issues in Action](images/in_action.gif)
 
 ## Release Notes
+
+### 0.9.1
+
+- Avoid naming overlap with PR extension.
 
 ### 0.9.0
 

@@ -2,7 +2,7 @@
   "name": "github-issues-prs",
   "displayName": "GitHub Issues",
   "description": "View the issues assigned to you in the Explorer viewlet.",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "publisher": "ms-vscode",
   "repository": {
     "type": "git",
