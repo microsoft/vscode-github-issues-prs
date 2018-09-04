@@ -1,7 +1,7 @@
 {
   "name": "github-issues-prs",
-  "displayName": "GitHub Issues and PRs",
-  "description": "View the issues and PRs assigned to you in the Explorer viewlet.",
+  "displayName": "GitHub Issues",
+  "description": "View the issues assigned to you in the Explorer viewlet.",
   "version": "0.9.0",
   "publisher": "ms-vscode",
   "repository": {
@@ -31,7 +31,7 @@
       "explorer": [
         {
           "id": "githubIssuesPrs",
-          "name": "GitHub Issues and PRs"
+          "name": "GitHub Issues"
         }
       ]
     },
