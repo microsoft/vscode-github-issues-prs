@@ -1,12 +1,10 @@
 import * as path from 'path';
 
 import * as GitHub from '@octokit/rest';
-import open = require('open');
-import { copy } from 'copy-paste';
 import { fill } from 'git-credential-node';
 import * as moment from 'moment';
 
-import { EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, QuickPickItem, Uri, TreeItemCollapsibleState, WorkspaceFolder, window, workspace, commands } from 'vscode';
+import { EventEmitter, TreeDataProvider, TreeItem, ExtensionContext, QuickPickItem, Uri, TreeItemCollapsibleState, WorkspaceFolder, window, workspace, commands, env } from 'vscode';
 
 import { exec, allMatches, fetchAll } from './utils';
 
@@ -159,7 +157,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 				repo: selectedRemote.remote.repo
 			});
 			// TODO: Store in cache
-			open(data.data.html_url + '/issues/new');
+			await env.openExternal(Uri.parse(data.data.html_url + '/issues/new'));
 
 		};
 
@@ -327,16 +325,16 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 			});
 	}
 
-	private openMilestone(milestone: Milestone) {
+	private async openMilestone(milestone: Milestone) {
 		const issue = milestone.issues[0];
 		const item = issue.item;
 		const assignee = issue.query.assignee;
-		const url = `https://github.com/issues?utf8=%E2%9C%93&q=is%3Aopen+milestone%3A%22${item.milestone.title}%22${assignee ? '+assignee%3A' + assignee : ''}`;
-		commands.executeCommand('vscode.open', Uri.parse(url));
+		const url = `https://github.com/issues?utf8=%E2%9C%93&q=is%3Aopen+${item.milestone ? `milestone%3A%22${item.milestone.title}%22` : 'no%3Amilestone'}${assignee ? '+assignee%3A' + assignee : ''}`;
+		return env.openExternal(Uri.parse(url));
 	}
 
-	private openIssue(issue: Issue) {
-		commands.executeCommand('vscode.open', Uri.parse(issue.item.html_url));
+	private async openIssue(issue: Issue) {
+		return env.openExternal(Uri.parse(issue.item.html_url));
 	}
 
 	private async checkoutPullRequest(issue: Issue) {
@@ -406,20 +404,20 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		}
 	}
 
-	private copyNumber(issue: Issue) {
-		copy(`#${issue.item.number}`);
+	private async copyNumber(issue: Issue) {
+		return env.clipboard.writeText(`#${issue.item.number}`);
 	}
 
-	private copyText(issue: Issue) {
-		copy(issue.label);
+	private async copyText(issue: Issue) {
+		return env.clipboard.writeText(issue.label!);
 	}
 
-	private copyMarkdown(issue: Issue) {
-		copy(`[#${issue.item.number}](${issue.item.html_url})`);
+	private async copyMarkdown(issue: Issue) {
+		return env.clipboard.writeText(`[#${issue.item.number}](${issue.item.html_url})`);
 	}
 
-	private copyUrl(issue: Issue) {
-		copy(issue.item.html_url);
+	private async copyUrl(issue: Issue) {
+		return env.clipboard.writeText(issue.item.html_url);
 	}
 
 	private async getGitHubRemotes() {

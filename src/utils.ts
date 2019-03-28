@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import * as GitHub from '@octokit/rest';
 
 export interface ExecResult {
-	error: Error;
+	error: Error | null;
 	stdout: string;
 	stderr: string;
 }
