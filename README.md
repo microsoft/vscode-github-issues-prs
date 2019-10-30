@@ -6,6 +6,10 @@ View the issues assigned to you in the Explorer viewlet. Currently the username 
 
 ## Release Notes
 
+### 0.9.2
+
+- Update https-proxy-agent (https://www.npmjs.com/advisories/1184).
+
 ### 0.9.1
 
 - Avoid naming overlap with PR extension.
