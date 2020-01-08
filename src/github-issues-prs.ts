@@ -434,7 +434,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 						let remote = remotes[`${owner}/${repo}`];
 						if (!remote) {
 							const data = await fill(url);
-							remote = { url, owner, repo, username: data && data.username, password: data && data.password, folders: [] };
+							remote = { url, owner: owner.toLowerCase(), repo: repo.toLowerCase(), username: data && data.username, password: data && data.password, folders: [] };
 							remotes[`${owner}/${repo}`] = remote;
 						}
 						remote.folders.push(folder);
