@@ -305,7 +305,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		return items
 			.map((item: any) => ({
 				item,
-				remote: remotes.find(remote => item.repository_url.endsWith(`/${remote.owner}/${remote.repo}`))
+				remote: remotes.find(remote => item.repository_url.toLowerCase().endsWith(`/${remote.owner.toLowerCase()}/${remote.repo.toLowerCase()}`))
 			}))
 			.filter(({ remote }) => !!remote)
 			.map(({ item, remote }) => {
