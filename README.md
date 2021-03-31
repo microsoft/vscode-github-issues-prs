@@ -6,6 +6,12 @@ View the issues assigned to you in the Explorer viewlet. Currently the username 
 
 ## Release Notes
 
+### 0.9.3
+
+- Ignore folder casing for owner and repo (#44).
+- Update username and host settings to application scope.
+- Update to use @types/vscode.
+
 ### 0.9.2
 
 - Update https-proxy-agent (https://www.npmjs.com/advisories/1184).

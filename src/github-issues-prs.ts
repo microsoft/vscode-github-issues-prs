@@ -111,7 +111,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 		if (!this.fetching) {
 			this.children = undefined;
 			await this.getChildren();
-			this._onDidChangeTreeData.fire();
+			this._onDidChangeTreeData.fire(undefined);
 		}
 	}
 
@@ -409,7 +409,7 @@ export class GitHubIssuesPrsProvider implements TreeDataProvider<TreeItem> {
 	}
 
 	private async copyText(issue: Issue) {
-		return env.clipboard.writeText(issue.label!);
+		return env.clipboard.writeText(issue.label as string);
 	}
 
 	private async copyMarkdown(issue: Issue) {
